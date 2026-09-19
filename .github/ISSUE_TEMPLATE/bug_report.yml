@@ -1,0 +1,57 @@
+name: Bug 报告
+description: 报告 main 分支上的功能缺陷
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ 如果你要报告的是 `vuln-lab` 分支上**故意留下的漏洞**，请不要开 issue ——
+        > 那是教学靶场，不是缺陷。真实漏洞请走 Security 标签页的 Private vulnerability reporting。
+
+  - type: input
+    id: commit
+    attributes:
+      label: 分支 / 提交
+      description: 出问题的分支或 commit hash
+      placeholder: main @ abc1234
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 访问 /api/...
+        2. 提交 ...
+        3. 出现 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 如果有响应体或日志，请贴出来（注意先脱敏 token、密码、邮箱）
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      value: |
+        - PHP：
+        - 数据库：
+        - 操作系统：
+        - 浏览器（前端问题）：
+    validations:
+      required: false
