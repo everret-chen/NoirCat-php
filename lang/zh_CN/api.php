@@ -28,4 +28,12 @@ return [
         'SYSTEM_ERROR' => '服务器内部错误',
         'SERVICE_UNAVAILABLE' => '服务暂时不可用',
     ],
+
+    'messages' => [
+        'registered' => '注册成功',
+        'logged_in' => '登录成功',
+        'logged_out' => '已退出登录',
+        'profile_updated' => '资料已更新',
+        'avatar_updated' => '头像已更新',
+    ],
 ];

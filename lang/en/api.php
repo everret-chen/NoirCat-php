@@ -28,4 +28,12 @@ return [
         'SYSTEM_ERROR' => 'Internal server error.',
         'SERVICE_UNAVAILABLE' => 'Service temporarily unavailable.',
     ],
+
+    'messages' => [
+        'registered' => 'Registration successful.',
+        'logged_in' => 'Signed in successfully.',
+        'logged_out' => 'Signed out successfully.',
+        'profile_updated' => 'Profile updated.',
+        'avatar_updated' => 'Avatar updated.',
+    ],
 ];
