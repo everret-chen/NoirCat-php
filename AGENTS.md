@@ -5,7 +5,7 @@
 技术栈见 PROJECT_SPEC_PHP.md。
 
 ## 代码约定
-- PHP 8.3+，PSR-12，2 空格缩进
+- PHP 8.3+，PSR-12，4 空格缩进
 - 控制器瘦，服务层厚
 - 所有 SQL 用 Eloquent 或 Query Builder 参数绑定
 - API 响应格式：{ code, message, data }

@@ -2,7 +2,7 @@
 
 > 基线：`PROJECT_SPEC_PHP.md`（v1，未改动）
 > 性质：架构说明 + 方案改进。自包含，确认后可直接替换 v1 成为 v2 规格书。
-> 约定：遵循 `AGENTS.md`（PHP 8.3+ / PSR-12 / 2 空格 / 控制器瘦服务层厚 / API 响应 `{code,message,data}` / 中文沟通 / 英文注释）。
+> 约定：遵循 `AGENTS.md`（PHP 8.3+ / PSR-12 / 4 空格 / 控制器瘦服务层厚 / API 响应 `{code,message,data}` / 中文沟通 / 英文注释）。
 
 ---
 
