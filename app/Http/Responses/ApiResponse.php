@@ -17,6 +17,11 @@ use Illuminate\Http\JsonResponse;
 final class ApiResponse
 {
     /**
+     * Keep CJK messages readable in raw JSON instead of \uXXXX escapes.
+     */
+    private const JSON_OPTIONS = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+
+    /**
      * @param  array<string, mixed>|null  $meta
      */
     public static function success(
@@ -35,7 +40,7 @@ final class ApiResponse
             $payload['meta'] = $meta;
         }
 
-        return response()->json($payload, $status);
+        return response()->json($payload, $status, [], self::JSON_OPTIONS);
     }
 
     public static function error(
@@ -48,7 +53,7 @@ final class ApiResponse
             'code' => $code->value,
             'message' => $message ?? $code->message(),
             'data' => $data,
-        ], $status ?? $code->httpStatus());
+        ], $status ?? $code->httpStatus(), [], self::JSON_OPTIONS);
     }
 
     /**
