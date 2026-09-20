@@ -62,8 +62,41 @@
 - [x] 新增 4 个测试文件（邮箱验证 / 密码重置 / 会话 / 授权接线）；全量 **64 个用例 / 263 断言通过**，PHPStan level 6 **0 错误**
 - [x] 端到端冒烟：注册→验证邮件→点击签名链接验证→会话管理→重置密码（**令牌从邮件日志真实提取**）全部通过
 
+### 收尾（已完成）
+- [x] `vuln-lab` 对照漏洞：会话 IDOR、验证哈希不校验、重置令牌可重用、重置接口无限流（见 `auth-vuln-lab.md`）
+- [x] 邮件改为队列投递（两个通知实现 `ShouldQueue`，本地需 `php artisan queue:work`）
+- [x] 前端依赖安装（`npm install`，Tailwind v4 + Vite 已在 `package.json`）
+- [ ] 2FA（TOTP）与登录设备信息（可选，暂缓）
+- [ ] 把 18 个权限点接入 Phase 2+ 各模块的 Policy 与路由（论坛部分已完成）
+
+## Phase 2：论坛模块（进行中）
+
+### 数据层
+- [x] 迁移：`categories`（版块/书类共用，含 `name_en`）、`posts`（Markdown 原文 + `content_html` 缓存、置顶、计数器、软删除）、
+      `comments`（嵌套 `parent_id`、状态、软删除）、`likes`（多态 + 唯一约束防重复点赞）
+- [x] 模型与工厂：`Category` / `Post` / `Comment` / `Like`；`Post::$fillable` **不含** `author_id` 与 `content_html`
+- [x] 种子：5 个论坛版块 + 4 个书类
+
+### 服务与接口
+- [x] `MarkdownService`：CommonMark（`html_input=strip`、禁不安全链接）+ HTMLPurifier 白名单，双层过滤；含纯文本摘要
+- [x] `PostService`：发帖/改帖（改内容自动重渲染）/删除/置顶/点赞（幂等 + 计数器）/浏览量（每人每帖每小时去重）/列表（版块、作者、排序、搜索）
+- [x] `CommentService`：回复（校验父评论属于同一帖 + 深度上限 3 层）、隐藏、删除，事务内维护计数
+- [x] 授权：`PostPolicy`（view 支持草稿仅作者/版主可见；update/delete 支持本人或版主；pin 需 `post:pin`）、`CommentPolicy`
+- [x] 接口：`GET /api/posts`、`GET /api/posts/{id}`、`POST /api/posts`、`PUT /api/posts/{id}`、`DELETE /api/posts/{id}`、
+      `POST /api/posts/{id}/like`、`DELETE /api/posts/{id}/like`、`POST /api/posts/{id}/pin`、
+      `GET|POST /api/posts/{id}/comments`、`DELETE /api/comments/{id}`、`POST /api/comments/{id}/hide`、
+      `GET /api/categories`、`GET /api/search`
+- [x] `UseSanctumGuard` 中间件：让公开 API 路由也能识别 Bearer 令牌（否则策略会把作者当访客）
+- [x] 开启 Eloquent 严格模式（非生产环境丢弃非 fillable 字段直接报错）—— 由本次 `content_html` 被静默丢弃的 bug 反推
+
+### 测试
+- [x] `MarkdownServiceTest`（6 例）：脚本标签、事件属性、`javascript:`/`data:` 链接、iframe/style 均被清除
+- [x] `PostTest`（11 例）：发布与清洗、**作者不可伪造**、草稿不可见、浏览量去重、越权改/删、仅版主置顶、重复点赞不叠加、版块与搜索过滤
+- [x] `CommentTest`（7 例）：计数维护、跨帖回复被拒、深度超限被拒、越权删除、版主隐藏、隐藏评论不列出
+- [x] `SearchTest`（4 例）：标题与正文命中、**通配符按字面处理**、最小长度、只返回已发布
+- [x] 全量：**93 用例 / 367 断言通过**，PHPStan level 6 **0 错误**
+
 ### 待办
-- [ ] `vuln-lab` 补充对照漏洞：会话 IDOR、验证哈希不校验、重置令牌可重用/不失效
-- [ ] 2FA（TOTP）与登录设备信息（可选）
-- [ ] 邮件改为队列投递（`ShouldQueue` + `queue:work`）
-- [ ] 把 18 个权限点接入 Phase 2+ 各模块的 Policy 与路由
+- [ ] 前端页面（Blade + Tailwind + Alpine）：全局布局、认证页、论坛列表/详情/发帖/评论
+- [ ] `docs/audit/forum-audit.md` 与 `vuln-lab` 论坛对照漏洞（存储型 XSS、越权删帖、评论深度绕过等）
+- [ ] 搜索切换到 Meilisearch + Scout（当前为参数绑定的 LIKE，已转义通配符）
