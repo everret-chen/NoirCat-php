@@ -35,7 +35,7 @@ jobs:
         run: composer config -g repos.packagist composer https://mirrors.tencent.com/composer/
 
       - name: Cache Composer packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('composer.lock') }}
