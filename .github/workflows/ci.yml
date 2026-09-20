@@ -20,26 +20,32 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, sqlite3, openssl, curl, fileinfo, zip, intl, gd
+          extensions: mbstring, pdo_sqlite, sqlite3, intl, gd, zip, xml, curl, fileinfo
           coverage: none
+          tools: composer:v2
+          # Composer cache is handled by setup-php, so there is no second
+          # third-party action (and no second action major to keep current).
+          cache: composer
+
+      # Makes a failing run self-diagnosing: the log shows the runtime and the
+      # exact extension set before anything else can fail.
+      - name: Diagnostics (runtime, extensions, Composer)
+        run: |
+          php -v
+          php -m
+          composer --version
+          composer diagnose || true
 
       # The committed composer.lock was resolved through this registry (see CONTRIBUTING.md).
       # Configuring the same registry keeps the lock file's content hash consistent.
       - name: Align Composer registry with the lock file
         run: composer config -g repos.packagist composer https://mirrors.tencent.com/composer/
-
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
