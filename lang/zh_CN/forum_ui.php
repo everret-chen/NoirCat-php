@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'title' => '论坛',
+    'subtitle' => '讨论、笔记与踩坑记录',
+    'new_post' => '发帖',
+    'search_placeholder' => '搜索帖子…',
+    'filter_category' => '版块',
+    'empty' => '还没有帖子，来做第一个吧。',
+    'post_title' => '标题',
+    'post_content' => '正文',
+    'markdown_hint' => '支持 Markdown：**加粗**、`代码`、列表、表格、引用、链接。渲染结果会经过安全过滤。',
+    'publish' => '发布',
+    'save_draft' => '保存草稿',
+    'edit_post' => '编辑帖子',
+    'by' => '作者',
+    'comments_title' => '评论',
+    'no_comments' => '还没有评论',
+    'comment_placeholder' => '写下你的看法…',
+    'post_comment' => '发表评论',
+    'reply' => '回复',
+    'reply_placeholder' => '回复这条评论…',
+    'submit_reply' => '提交回复',
+    'like' => '点赞',
+    'unlike' => '取消点赞',
+    'pin' => '置顶',
+    'unpin' => '取消置顶',
+    'hidden' => '该评论已被隐藏',
+    'login_to_comment' => '登录后即可参与讨论',
+    'search_results' => '关于「:q」的搜索结果',
+    'clear_search' => '清除搜索',
+];

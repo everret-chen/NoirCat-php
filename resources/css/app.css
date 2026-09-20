@@ -2,11 +2,154 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
-@source "../**/*.blade.php";
-@source "../**/*.js";
-@source "../**/*.vue";
+@source '../**/*.blade.php';
+@source '../**/*.js';
 
+/* 墨猫问雪：墨色为骨、雪色为神 */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+
+    /* 墨色：界面骨架 */
+    --color-ink-950: #0a0c11;
+    --color-ink-900: #11141c;
+    --color-ink-850: #171b25;
+    --color-ink-800: #1e2330;
+    --color-ink-700: #2b3141;
+    --color-ink-600: #3b4356;
+    --color-ink-400: #7d879b;
+    --color-ink-300: #a7b0c0;
+    --color-ink-200: #cbd3e1;
+    --color-ink-100: #e8ecf4;
+
+    /* 雪色：强调与交互 */
+    --color-frost-600: #4f8ff7;
+    --color-frost-500: #6ea8fe;
+    --color-frost-400: #93c0ff;
+    --color-frost-300: #bcd8ff;
+}
+
+@layer base {
+    html {
+        color-scheme: dark;
+    }
+
+    /* Alpine: hide elements until the component is initialised. */
+    [x-cloak] {
+        display: none !important;
+    }
+
+    body {
+        @apply bg-ink-950 text-ink-100 antialiased;
+    }
+
+    a {
+        @apply text-frost-400 hover:text-frost-300;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition;
+    }
+
+    .btn-primary {
+        @apply btn bg-frost-500 text-ink-950 hover:bg-frost-400;
+    }
+
+    .btn-ghost {
+        @apply btn border border-ink-700 text-ink-200 hover:border-ink-600 hover:bg-ink-850;
+    }
+
+    .btn-danger {
+        @apply btn border border-red-900/60 text-red-300 hover:bg-red-950/40;
+    }
+
+    .card {
+        @apply rounded-lg border border-ink-800 bg-ink-900/70 p-5;
+    }
+
+    .input {
+        @apply w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100 placeholder-ink-400 focus:border-frost-500 focus:outline-none;
+    }
+
+    .label {
+        @apply mb-1.5 block text-sm text-ink-200;
+    }
+
+    .badge {
+        @apply inline-flex items-center rounded px-2 py-0.5 text-xs text-ink-200;
+    }
+
+    .badge-pin {
+        @apply badge bg-frost-600/20 text-frost-300;
+    }
+
+    .badge-draft {
+        @apply badge bg-ink-700 text-ink-300;
+    }
+
+    .muted {
+        @apply text-ink-400;
+    }
+
+    .prose-forum {
+        @apply leading-relaxed text-ink-100;
+    }
+
+    .prose-forum h1 {
+        @apply mt-6 mb-3 text-xl font-semibold text-ink-100;
+    }
+
+    .prose-forum h2 {
+        @apply mt-6 mb-3 text-lg font-semibold text-ink-100;
+    }
+
+    .prose-forum h3 {
+        @apply mt-5 mb-2 font-semibold text-ink-100;
+    }
+
+    .prose-forum p {
+        @apply my-3;
+    }
+
+    .prose-forum a {
+        @apply text-frost-400 underline decoration-frost-600/50;
+    }
+
+    .prose-forum ul {
+        @apply my-3 list-disc pl-6;
+    }
+
+    .prose-forum ol {
+        @apply my-3 list-decimal pl-6;
+    }
+
+    .prose-forum blockquote {
+        @apply my-4 border-l-2 border-ink-700 pl-4 text-ink-300;
+    }
+
+    .prose-forum code {
+        @apply rounded bg-ink-800 px-1.5 py-0.5 text-[0.85em] text-frost-300;
+    }
+
+    .prose-forum pre {
+        @apply my-4 overflow-x-auto rounded-lg border border-ink-800 bg-ink-950 p-4 text-sm;
+    }
+
+    .prose-forum pre code {
+        @apply bg-transparent p-0 text-ink-100;
+    }
+
+    .prose-forum table {
+        @apply my-4 w-full border-collapse text-sm;
+    }
+
+    .prose-forum th,
+    .prose-forum td {
+        @apply border border-ink-800 px-3 py-2 text-left;
+    }
+
+    .prose-forum img {
+        @apply my-4 max-w-full rounded-lg;
+    }
 }
