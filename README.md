@@ -28,8 +28,24 @@
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
-php artisan serve          # http://localhost:8000
+php artisan migrate --seed   # 建表 + 角色/权限 + 论坛版块
+php artisan storage:link     # 头像与上传文件的公开访问
+php artisan serve            # http://localhost:8000
+```
+
+验证邮件与重置邮件是**队列投递**的（`ShouldQueue` + `QUEUE_CONNECTION=database`），
+本地调试时另开一个终端跑 worker：
+
+```bash
+php artisan queue:work
+```
+
+前端资源（Tailwind v4 + Vite）：
+
+```bash
+npm install
+npm run dev        # 开发时热更新
+npm run build      # 部署前构建
 ```
 
 开发期数据库为 SQLite（`database/database.sqlite`），会话、队列、缓存均用 `database` 驱动，
