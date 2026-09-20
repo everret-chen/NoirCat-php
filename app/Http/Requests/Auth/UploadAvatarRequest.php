@@ -24,14 +24,10 @@ class UploadAvatarRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // "image" validates the actual content, "mimes" pins the accepted
-            // formats. SVG is deliberately excluded (it can carry script).
+            // VULN: no type, content or size validation at all.
             'avatar' => [
                 'required',
                 'file',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:'.self::MAX_KILOBYTES,
             ],
         ];
     }

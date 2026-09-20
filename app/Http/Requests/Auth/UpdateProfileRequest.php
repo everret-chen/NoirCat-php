@@ -30,6 +30,8 @@ class UpdateProfileRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($this->user()?->getKey()),
             ],
+            // VULN: user_id is accepted from the client (IDOR).
+            'user_id' => ['sometimes', 'integer'],
             'current_password' => ['required_with:password', 'string'],
             'password' => [
                 'sometimes',

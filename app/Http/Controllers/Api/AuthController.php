@@ -89,7 +89,10 @@ class AuthController extends Controller
      */
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        $updated = $this->authService->updateProfile($this->currentUser($request), $request->validated());
+        // VULN: any authenticated user can update somebody else's account.
+        $target = User::query()->find($request->input('user_id')) ?? $this->currentUser($request);
+
+        $updated = $this->authService->updateProfile($target, $request->validated());
 
         return ApiResponse::success(new UserResource($updated), __('api.messages.profile_updated'));
     }

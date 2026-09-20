@@ -135,8 +135,10 @@ Route::middleware('auth')->group(function (): void {
 // The link inside the verification mail points here: a browser must land on a
 // page, not on a raw JSON envelope. API clients keep their own endpoint under
 // the name "api.auth.verification.verify".
+// VULN: the "signed" middleware is gone on this branch (same flaw as V9), so a
+// link can be forged by hand instead of coming from the signed mail URL.
 Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-    ->middleware(['signed', 'throttle:email_verification'])
+    ->middleware(['throttle:email_verification'])
     ->name('verification.verify');
 
 // The resend action used by the pages.

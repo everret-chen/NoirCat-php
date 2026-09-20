@@ -29,7 +29,8 @@ class SessionService
      */
     public function list(User $user): Collection
     {
-        return $user->tokens()
+        // VULN: no scoping - every session of every account is listed.
+        return PersonalAccessToken::query()
             ->orderByRaw('COALESCE(last_used_at, created_at) DESC')
             ->get();
     }
@@ -58,7 +59,8 @@ class SessionService
 
     public function revoke(User $user, int|string $tokenId): void
     {
-        $token = $user->tokens()->whereKey($tokenId)->first();
+        // VULN: unscoped lookup - any authenticated user can revoke any session.
+        $token = PersonalAccessToken::query()->whereKey($tokenId)->first();
 
         if ($token === null) {
             throw new BusinessException(ErrorCode::RESOURCE_NOT_FOUND);

@@ -58,9 +58,8 @@ class AuditLogService
      */
     private function redact(array $payload): array
     {
-        $sensitive = array_map('strtolower', (array) config('noircat.audit.redacted_keys', []));
-
-        return $this->redactRecursive($payload, array_values($sensitive));
+        // VULN: redaction disabled - secrets are persisted verbatim.
+        return $payload;
     }
 
     /**

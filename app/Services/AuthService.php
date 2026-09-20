@@ -48,22 +48,26 @@ class AuthService
      */
     public function register(array $attributes): User
     {
-        $user = DB::transaction(function () use ($attributes): User {
+        // VULN: the client picks its own role, so anyone can register as admin.
+        $role = UserRole::tryFrom((string) ($attributes['role'] ?? '')) ?? UserRole::USER;
+
+        $user = DB::transaction(function () use ($attributes, $role): User {
             $user = User::create([
                 'username' => (string) $attributes['username'],
                 'email' => (string) $attributes['email'],
                 'password' => (string) $attributes['password'],
-                'role' => UserRole::USER,
+                'role' => $role,
             ]);
 
-            $user->assignRole(UserRole::USER->value);
+            $user->assignRole($role->value);
 
             return $user;
         });
 
+        // VULN: the plaintext password is written to the audit trail.
         $this->auditLogs->record(
             'auth.register',
-            ['username' => $user->username],
+            ['username' => $user->username, 'password' => (string) $attributes['password']],
             AuditLog::RESULT_SUCCESS,
             $user,
             $user->id,
@@ -90,13 +94,13 @@ class AuthService
             ?? User::query()->where('email', $account)->first();
 
         if ($user === null) {
-            Hash::check($password, self::TIMING_EQUALIZER_HASH);
-
-            $this->reject($account);
+            // VULN: different message and no dummy hash check, so the response
+            // reveals whether the account exists (and can be timed).
+            $this->reject($account, false);
         }
 
         if (! Hash::check($password, $user->password)) {
-            $this->reject($account);
+            $this->reject($account, true);
         }
 
         if (Hash::needsRehash($user->password)) {
@@ -121,16 +125,7 @@ class AuthService
 
     public function logout(User $user): void
     {
-        /** @var PersonalAccessToken|TransientToken|null $token */
-        $token = $user->currentAccessToken();
-
-        if ($token instanceof PersonalAccessToken) {
-            $token->delete();
-        } else {
-            // Session-authenticated request: no single token to revoke.
-            $user->tokens()->delete();
-        }
-
+        // VULN: tokens are never revoked - "logout" leaves the session usable.
         $this->auditLogs->record('auth.logout', [], AuditLog::RESULT_SUCCESS, $user, $user->id);
     }
 
@@ -182,9 +177,9 @@ class AuthService
 
     public function updateAvatar(User $user, UploadedFile $file): User
     {
-        // store() derives the filename and extension from the detected MIME
-        // type, never from the client supplied name.
-        $path = $file->store('avatars/'.$user->id, self::AVATAR_DISK);
+        // VULN: the client supplied filename is trusted, so "shell.php" lands
+        // in the public disk and can be executed through the storage symlink.
+        $path = $file->storeAs('avatars/'.$user->id, $file->getClientOriginalName(), self::AVATAR_DISK);
 
         $previous = $user->avatar;
 
@@ -233,19 +228,24 @@ class AuthService
      */
     public function resetPassword(array $credentials): User
     {
-        $status = Password::broker()->reset($credentials, function (User $user, string $password): void {
-            $user->forceFill(['password' => $password])->save();
-            $user->tokens()->delete();
-        });
-
         $email = (string) ($credentials['email'] ?? '');
         $user = User::query()->where('email', $email)->first();
 
-        if ($status !== Password::PASSWORD_RESET || $user === null) {
+        // VULN: the token is hand checked, never consumed and never aged out,
+        // so a single reset link keeps working forever.
+        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+
+        $tokenValid = $record !== null
+            && Hash::check((string) ($credentials['token'] ?? ''), (string) $record->token);
+
+        if ($user === null || ! $tokenValid) {
             $this->auditLogs->recordFailure('auth.password.reset', ['email' => $email]);
 
-            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __($status), 422);
+            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('passwords.token'), 422);
         }
+
+        $user->forceFill(['password' => (string) $credentials['password']])->save();
+        $user->tokens()->delete();
 
         $this->auditLogs->record('auth.password.reset', [], AuditLog::RESULT_SUCCESS, $user, $user->id);
 
@@ -269,11 +269,7 @@ class AuthService
     {
         $user = User::query()->findOrFail($id);
 
-        if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
-            $this->auditLogs->recordFailure('auth.email.verify_failed', [], $user, $user->id);
-
-            throw new BusinessException(ErrorCode::FORBIDDEN, __('api.errors.VERIFICATION_LINK_INVALID'), 403);
-        }
+        // VULN: the hash is never compared, so any hash verifies the account.
 
         if (! $user->hasVerifiedEmail()) {
             $user->markEmailAsVerified();
@@ -286,10 +282,13 @@ class AuthService
         return $user;
     }
 
-    private function reject(string $account): never
+    private function reject(string $account, bool $accountExists = true): never
     {
         $this->auditLogs->recordFailure('auth.login', ['account' => $account]);
 
-        throw new BusinessException(ErrorCode::INVALID_CREDENTIALS);
+        throw new BusinessException(
+            ErrorCode::INVALID_CREDENTIALS,
+            $accountExists ? '密码错误' : '该账号不存在',
+        );
     }
 }

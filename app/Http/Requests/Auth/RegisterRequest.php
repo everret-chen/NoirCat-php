@@ -41,6 +41,8 @@ class RegisterRequest extends FormRequest
                 'confirmed',
                 Password::min(8)->letters()->numbers(),
             ],
+            // VULN: role is accepted straight from the request body.
+            'role' => ['sometimes', 'string', 'in:user,guild_admin,moderator,admin'],
         ];
     }
 }

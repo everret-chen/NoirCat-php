@@ -31,20 +31,18 @@ Route::get('/health', HealthController::class)->name('api.health');
 
 Route::prefix('auth')->name('api.auth.')->group(function (): void {
     // Public endpoints carry their own, stricter limiter (config/noircat.php).
+    // VULN: no rate limiting - credentials can be brute forced.
     Route::post('register', [AuthController::class, 'register'])
-        ->middleware('throttle:register')
         ->name('register');
 
     Route::post('login', [AuthController::class, 'login'])
-        ->middleware('throttle:login')
         ->name('login');
 
+    // VULN: no rate limit - reset mails can be bombed and the endpoint brute forced.
     Route::post('password/email', [AuthController::class, 'forgotPassword'])
-        ->middleware('throttle:password_reset')
         ->name('password.email');
 
     Route::post('password/reset', [AuthController::class, 'resetPassword'])
-        ->middleware('throttle:password_reset')
         ->name('password.reset');
 
 
@@ -171,6 +169,7 @@ Route::post('/reports', [ReportController::class, 'store'])
 
 // The "api" prefix comes from the api routing group, so the "auth" segment is
 // part of the path here: a route level prefix() would be applied after it.
+// VULN: the "signed" middleware is gone on this branch, so the link can be forged.
 Route::get('auth/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-    ->middleware(['signed', 'throttle:email_verification'])
+    ->middleware(['throttle:email_verification'])
     ->name('api.auth.verification.verify');
