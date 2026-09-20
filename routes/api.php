@@ -70,7 +70,8 @@ Route::prefix('auth')->name('api.auth.')->group(function (): void {
 | Forum
 |--------------------------------------------------------------------------
 |
-| Public reads, authenticated writes. Write endpoints carry the "posts"
+| Public reads, authenticated writes. Write endpoints additionally require a
+| verified email address (error code 1005 otherwise) and carry the "posts"
 | limiter; moderation is authorised through PostPolicy / CommentPolicy, which
 | map onto the post:* and comment:* permissions.
 |
@@ -84,24 +85,27 @@ Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name(
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/posts', [PostController::class, 'store'])
-        ->middleware('throttle:posts')
+        ->middleware(['verified', 'throttle:posts'])
         ->name('api.posts.store');
 
     Route::put('/posts/{post}', [PostController::class, 'update'])
-        ->middleware('throttle:posts')
+        ->middleware(['verified', 'throttle:posts'])
         ->name('api.posts.update');
 
+    // Deletion is not gated on the mailbox check, so moderation keeps working.
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('api.posts.destroy');
     Route::post('/posts/{post}/pin', [PostController::class, 'pin'])->name('api.posts.pin');
 
     Route::post('/posts/{post}/like', [PostController::class, 'like'])
-        ->middleware('throttle:posts')
+        ->middleware(['verified', 'throttle:posts'])
         ->name('api.posts.like');
 
-    Route::delete('/posts/{post}/like', [PostController::class, 'unlike'])->name('api.posts.unlike');
+    Route::delete('/posts/{post}/like', [PostController::class, 'unlike'])
+        ->middleware(['verified', 'throttle:posts'])
+        ->name('api.posts.unlike');
 
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])
-        ->middleware('throttle:posts')
+        ->middleware(['verified', 'throttle:posts'])
         ->name('api.posts.comments.store');
 
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('api.comments.destroy');
@@ -113,10 +117,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
 | Email verification link
 |--------------------------------------------------------------------------
 |
-| Registered outside the api.auth.* name group on purpose: the framework's
-| VerifyEmail notification resolves the link by the exact route name
-| "verification.verify". The endpoint is public because the signature plus the
-| email hash already prove mailbox ownership.
+| The framework's VerifyEmail notification resolves its link by the exact route
+| name "verification.verify", which now belongs to the Blade route so a mailed
+| link opens a page. This endpoint stays for API clients that verify a mailbox
+| programmatically; it is public because the signature plus the email hash
+| already prove mailbox ownership.
 |
 */
 
@@ -124,4 +129,4 @@ Route::middleware('auth:sanctum')->group(function (): void {
 // part of the path here: a route level prefix() would be applied after it.
 Route::get('auth/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
     ->middleware(['signed', 'throttle:email_verification'])
-    ->name('verification.verify');
+    ->name('api.auth.verification.verify');
