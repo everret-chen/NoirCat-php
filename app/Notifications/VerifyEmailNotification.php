@@ -12,10 +12,10 @@ use Illuminate\Notifications\Messages\MailMessage;
 /**
  * Localized email verification notification.
  *
- * The signed link points at the API endpoint
- * GET /api/auth/email/verify/{id}/{hash}, which is intentionally public:
- * the signature proves mailbox ownership, and the hash binds the link to the
- * email address it was sent to.
+ * The signed link points at the Blade route named "verification.verify"
+ * (GET /email/verify/{id}/{hash}) so a click opens a page; the endpoint is
+ * public because the signature proves request integrity, and the hash binds
+ * the link to the email address it was sent to.
  */
 class VerifyEmailNotification extends VerifyEmail implements ShouldQueue
 {

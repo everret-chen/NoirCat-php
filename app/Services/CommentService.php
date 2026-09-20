@@ -82,8 +82,16 @@ class CommentService
 
     public function hide(User $moderator, Comment $comment): Comment
     {
-        $comment->status = Comment::STATUS_HIDDEN;
-        $comment->save();
+        $wasVisible = $comment->status === Comment::STATUS_VISIBLE;
+
+        DB::transaction(function () use ($comment, $wasVisible): void {
+            $comment->status = Comment::STATUS_HIDDEN;
+            $comment->save();
+
+            if ($wasVisible) {
+                $this->decrementCounter($comment);
+            }
+        });
 
         $this->auditLogs->record(
             'forum.comment.hidden',
@@ -98,7 +106,15 @@ class CommentService
 
     public function delete(User $actor, Comment $comment): void
     {
-        $comment->delete();
+        $wasVisible = $comment->status === Comment::STATUS_VISIBLE;
+
+        DB::transaction(function () use ($comment, $wasVisible): void {
+            $comment->delete();
+
+            if ($wasVisible) {
+                $this->decrementCounter($comment);
+            }
+        });
 
         $this->auditLogs->record(
             'forum.comment.deleted',
@@ -107,6 +123,18 @@ class CommentService
             $comment,
             $actor->id,
         );
+    }
+
+    /**
+     * Keep posts.comment_count aligned with the comments a reader can actually
+     * see: hiding or deleting one must not leave the counter inflated.
+     */
+    private function decrementCounter(Comment $comment): void
+    {
+        Post::query()
+            ->whereKey($comment->post_id)
+            ->where('comment_count', '>', 0)
+            ->decrement('comment_count');
     }
 
     private function depthOf(Comment $comment): int

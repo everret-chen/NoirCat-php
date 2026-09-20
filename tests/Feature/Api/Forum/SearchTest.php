@@ -36,6 +36,19 @@ class SearchTest extends TestCase
         $this->getJson('/api/search?q='.urlencode('__'))->assertOk()->assertJsonPath('meta.total', 0);
     }
 
+    public function test_a_term_containing_a_wildcard_still_finds_its_post(): void
+    {
+        // Regression: escaping wildcards with a bare backslash made these
+        // terms unsearchable on SQLite, which has no default LIKE escape.
+        Post::factory()->create(['title' => '100% 覆盖率怎么写']);
+        Post::factory()->create(['title' => 'a_b 命名规范']);
+        Post::factory()->create(['title' => '无关帖']);
+
+        $this->getJson('/api/search?q='.urlencode('100%'))->assertOk()->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/search?q='.urlencode('a_b'))->assertOk()->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/search?q='.urlencode('100% 覆盖'))->assertOk()->assertJsonPath('meta.total', 1);
+    }
+
     public function test_search_requires_a_minimum_query_length(): void
     {
         $this->getJson('/api/search?q=a')

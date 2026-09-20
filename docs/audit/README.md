@@ -6,7 +6,7 @@
 | 模块 | 安全版审计 | 漏洞版对照 | 阶段 | 状态 |
 |---|---|---|---|---|
 | 认证与权限 | [auth-audit.md](auth-audit.md) | [auth-vuln-lab.md](auth-vuln-lab.md) | Phase 1 | ✅ 已完成 |
-| 论坛 | — | — | Phase 2 | ⏳ 待开始 |
+| 论坛 | [forum-audit.md](forum-audit.md) | [forum-vuln-lab.md](forum-vuln-lab.md) | Phase 2 | ✅ 已完成 |
 | 电子书 | — | — | Phase 3 | ⏳ 待开始 |
 | 学习成长 | — | — | Phase 4 | ⏳ 待开始 |
 | 公会与插件 | — | — | Phase 5 | ⏳ 待开始 |

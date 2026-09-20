@@ -153,4 +153,64 @@ class CommentTest extends TestCase
         $this->assertContains('visible one', $contents);
         $this->assertNotContains('hidden one', $contents);
     }
+
+    public function test_a_draft_does_not_accept_comments(): void
+    {
+        $post = Post::factory()->draft()->create();
+
+        $this->withToken($this->tokenFor($this->member()))
+            ->postJson('/api/posts/'.$post->id.'/comments', ['content' => '不该出现的评论'])
+            ->assertStatus(403)
+            ->assertJsonPath('code', ErrorCode::FORBIDDEN->value);
+
+        $this->assertDatabaseCount('comments', 0);
+        $this->assertSame(0, $post->refresh()->comment_count);
+    }
+
+    public function test_the_thread_of_a_draft_is_not_readable(): void
+    {
+        $post = Post::factory()->draft()->create();
+        Comment::factory()->create(['post_id' => $post->id, 'content' => '草稿里的评论']);
+
+        $this->withToken($this->tokenFor($this->member()))
+            ->getJson('/api/posts/'.$post->id.'/comments')
+            ->assertStatus(403)
+            ->assertJsonPath('code', ErrorCode::FORBIDDEN->value);
+
+        // The author still sees their own draft thread.
+        $this->app['auth']->forgetGuards();
+        $author = User::query()->whereKey($post->author_id)->firstOrFail();
+        $author->assignRole(UserRole::USER->value);
+
+        $this->withToken($this->tokenFor($author))
+            ->getJson('/api/posts/'.$post->id.'/comments')
+            ->assertOk();
+    }
+
+    public function test_deleting_or_hiding_a_comment_keeps_the_counter_honest(): void
+    {
+        $post = Post::factory()->create();
+        $token = $this->tokenFor($this->member());
+
+        $first = $this->withToken($token)->postJson('/api/posts/'.$post->id.'/comments', ['content' => 'one'])
+            ->assertCreated()->json('data.id');
+        $second = $this->withToken($token)->postJson('/api/posts/'.$post->id.'/comments', ['content' => 'two'])
+            ->assertCreated()->json('data.id');
+
+        $this->assertSame(2, $post->refresh()->comment_count);
+
+        $this->withToken($token)->deleteJson('/api/comments/'.$first)->assertOk();
+        $this->assertSame(1, $post->refresh()->comment_count);
+
+        // Hiding removes a comment from the visible thread, so the counter
+        // follows; hiding twice must not double count.
+        $this->app['auth']->forgetGuards();
+        $moderatorToken = $this->tokenFor($this->moderator());
+
+        $this->withToken($moderatorToken)->postJson('/api/comments/'.$second.'/hide')->assertOk();
+        $this->assertSame(0, $post->refresh()->comment_count);
+
+        $this->withToken($moderatorToken)->postJson('/api/comments/'.$second.'/hide')->assertOk();
+        $this->assertSame(0, $post->refresh()->comment_count);
+    }
 }

@@ -51,6 +51,21 @@ npm run build      # 部署前构建
 开发期数据库为 SQLite（`database/database.sqlite`），会话、队列、缓存均用 `database` 驱动，
 **不需要** Docker / MySQL / Redis 即可跑通；后续 Phase 接入 MySQL、Redis、MinIO、Meilisearch 时只改 `.env`。
 
+## 页面（Blade）
+
+| 路径 | 说明 |
+|---|---|
+| `/` | 首页：站点介绍与最新帖子 |
+| `/forum` | 论坛列表：版块、排序、搜索、`?mine=1` 只看自己的帖子 |
+| `/forum/{id}` | 帖子详情：Markdown 正文、嵌套评论、点赞 |
+| `/forum/create`、`/forum/{id}/edit` | 发帖 / 编辑（需登录且**邮箱已验证**） |
+| `/login`、`/register` | 登录 / 注册 |
+| `/profile` | 个人资料、头像上传、邮箱验证提示与重发 |
+| `/sessions` | 会话（设备）管理 |
+
+未验证邮箱的账号可以浏览，但发帖/评论/点赞会被引导到 `/profile`（API 对应 `403/1005`）。
+邮件里的验证链接指向 `GET /email/verify/{id}/{hash}`（签名 + 邮箱哈希校验），点开后会跳回页面并提示结果。
+
 ## 目录约定
 
 ```text
@@ -72,6 +87,7 @@ docs/                   方案、阶段记录与审计报告
 
 - `PROJECT_SPEC_PHP.md` — 方案书 v1
 - `docs/PLAN_V2.md` — 架构说明与方案改进 v2
+- `docs/audit/README.md` — 审计报告索引（含 `vuln-lab` 对照漏洞）
 - `docs/audit/phases.md` — 开发记录
 - `AGENTS.md` — 协作与代码约定
 

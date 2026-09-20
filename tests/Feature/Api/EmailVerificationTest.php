@@ -58,7 +58,7 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->unverified()->create();
 
-        $url = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
+        $url = URL::temporarySignedRoute('api.auth.verification.verify', now()->addMinutes(60), [
             'id' => $user->id,
             'hash' => sha1($user->getEmailForVerification()),
         ]);
@@ -76,7 +76,7 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->unverified()->create();
 
-        $url = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
+        $url = URL::temporarySignedRoute('api.auth.verification.verify', now()->addMinutes(60), [
             'id' => $user->id,
             'hash' => sha1('someone-else@example.com'),
         ]);
@@ -97,7 +97,7 @@ class EmailVerificationTest extends TestCase
         $this->getJson("/api/auth/email/verify/{$user->id}/{$hash}")
             ->assertStatus(403);
 
-        $expired = URL::temporarySignedRoute('verification.verify', now()->subMinute(), [
+        $expired = URL::temporarySignedRoute('api.auth.verification.verify', now()->subMinute(), [
             'id' => $user->id,
             'hash' => $hash,
         ]);

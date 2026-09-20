@@ -55,4 +55,15 @@ class PostPolicy
     {
         return $post->isPublished() || $user->id === $post->author_id;
     }
+
+    /**
+     * Only published posts accept comments.
+     *
+     * Without this rule any authenticated account could attach a comment to a
+     * draft it is not allowed to read, and could pollute that draft's counter.
+     */
+    public function comment(User $user, Post $post): bool
+    {
+        return $post->isPublished();
+    }
 }

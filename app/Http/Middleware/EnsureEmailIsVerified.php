@@ -15,8 +15,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Rejects requests from accounts whose email address is not verified yet.
  *
  * Registered as the "verified" alias, and intentionally stricter than the
- * framework middleware: it answers with the project envelope (code 1005)
- * instead of a generic 403 with an untranslated message.
+ * framework middleware: API calls answer with the project envelope (code 1005)
+ * instead of a generic 403 with an untranslated message, while browser
+ * requests are sent to the profile page where the resend button lives.
  */
 class EnsureEmailIsVerified
 {
@@ -25,7 +26,15 @@ class EnsureEmailIsVerified
         $user = $request->user();
 
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            throw new BusinessException(ErrorCode::EMAIL_NOT_VERIFIED);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                throw new BusinessException(ErrorCode::EMAIL_NOT_VERIFIED);
+            }
+
+            // The API-only routes in the mail notification can not help a
+            // browser session, so point the user at the resend form instead.
+            return redirect()
+                ->route('profile.edit')
+                ->with('error', __('auth_ui.verify_email_notice'));
         }
 
         return $next($request);

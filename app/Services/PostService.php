@@ -205,19 +205,23 @@ class PostService
     /**
      * Simple, parameter bound LIKE search.
      *
-     * Wildcards in user input are escaped so a query cannot turn into a
-     * pattern that walks the whole table. Meilisearch replaces this in the
-     * search phase.
+     * Wildcards in user input are neutralised with an explicit ESCAPE
+     * character. Relying on a bare backslash only works on MySQL: SQLite has no
+     * default escape character for LIKE, so a term like "100%" would match
+     * nothing at all there.
+     *
+     * Meilisearch replaces this in the search phase.
      *
      * @param  \Illuminate\Database\Eloquent\Builder<Post>  $query
      */
     private function applySearch(\Illuminate\Database\Eloquent\Builder $query, string $term): void
     {
-        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term);
+        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term);
+        $pattern = '%'.$escaped.'%';
 
-        $query->where(function ($builder) use ($escaped): void {
-            $builder->where('title', 'like', '%'.$escaped.'%')
-                ->orWhere('content', 'like', '%'.$escaped.'%');
+        $query->where(function ($builder) use ($pattern): void {
+            $builder->whereRaw("title LIKE ? ESCAPE '!'", [$pattern])
+                ->orWhereRaw("content LIKE ? ESCAPE '!'", [$pattern]);
         });
     }
 

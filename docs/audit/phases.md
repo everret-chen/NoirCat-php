@@ -89,14 +89,34 @@
 - [x] `UseSanctumGuard` 中间件：让公开 API 路由也能识别 Bearer 令牌（否则策略会把作者当访客）
 - [x] 开启 Eloquent 严格模式（非生产环境丢弃非 fillable 字段直接报错）—— 由本次 `content_html` 被静默丢弃的 bug 反推
 
+### 前端页面（Blade + Tailwind v4 + Alpine）
+- [x] 布局与样式：`layouts/app.blade.php`（导航/语言切换/登录态）、`resources/css/app.css` 的 `ink`/`frost` 主题与组件类、Alpine 交互（`resources/js/app.js`）
+- [x] 页面：首页、论坛列表（版块/排序/搜索/我的帖子）、帖子详情（Markdown 正文 + 嵌套评论 + 点赞）、发帖/编辑页、登录/注册、个人资料（含头像上传与验证邮箱提示）、会话管理
+- [x] `Web\{Home,Auth,Profile,Session,Forum}Controller`：控制器瘦，复用与 API 完全相同的 Service/Request/Policy，双入口行为一致
+- [x] 会话认证 + CSRF（`routes/web.php`），登录后 `session()->regenerate()` 防会话固定
+- [x] 邮件验证链接改为指向 Web 页面（`verification.verify` 归属 Blade 路由），点开是页面而非 JSON
+- [x] 未验证邮箱访问写接口：Web 跳转个人页并提示，API 返回 `403/1005`
+- [x] `@vite` 在未构建前端资源时降级（页面仍可打开），构建命令见 README
+
 ### 测试
 - [x] `MarkdownServiceTest`（6 例）：脚本标签、事件属性、`javascript:`/`data:` 链接、iframe/style 均被清除
 - [x] `PostTest`（11 例）：发布与清洗、**作者不可伪造**、草稿不可见、浏览量去重、越权改/删、仅版主置顶、重复点赞不叠加、版块与搜索过滤
-- [x] `CommentTest`（7 例）：计数维护、跨帖回复被拒、深度超限被拒、越权删除、版主隐藏、隐藏评论不列出
-- [x] `SearchTest`（4 例）：标题与正文命中、**通配符按字面处理**、最小长度、只返回已发布
-- [x] 全量：**93 用例 / 367 断言通过**，PHPStan level 6 **0 错误**
+- [x] `CommentTest`（10 例）：计数维护、跨帖回复被拒、深度超限被拒、越权删除、版主隐藏、隐藏评论不列出、**草稿不可评论/不可读**、删除与隐藏后计数校正
+- [x] `SearchTest`（5 例）：标题与正文命中、**通配符按字面处理且仍可命中**、最小长度、只返回已发布
+- [x] `WebPagesTest`（20 例）：页面渲染、访客重定向、注册/登录/登出、签名链接验证、未验证禁写、发帖改帖删帖越权、评论纯文本、点赞切换、资料与会话页、语言切换
+- [x] 全量：**115 用例 / 463 断言通过**，PHPStan level 6 **0 错误**
+
+### 审计与修复（本轮）
+- [x] `docs/audit/forum-audit.md`：检查清单、9 个发现并修复的问题、验证过程（含缺陷复现数据与修复后对比）、残留风险、复盘
+- [x] 修复：草稿可被灌评论 / 草稿评论串可被读（新增 `PostPolicy::comment` + 双入口 `authorize('view')`）
+- [x] 修复：评论删除/隐藏后 `comment_count` 虚高
+- [x] 修复：SQLite 下 LIKE 通配符转义失效导致 `%`/`_`/`\` 关键词搜不到（改显式 `ESCAPE '!'`）
+- [x] 修复：`verified` 中间件从未接线（论坛写接口全部挂上，删除/置顶除外）
+- [x] 修复：邮件验证链接点开是 JSON（改为 302 跳页面）
+- [x] 清理：删除框架脚手架示例测试（`tests/{Feature,Unit}/ExampleTest.php`，与真实用例重复且无 `RefreshDatabase`）
+- [x] 真实 HTTP 端到端冒烟（Cookie + CSRF + 签名链接，共 52 项断言）全部通过
+- [x] `vuln-lab` 论坛对照漏洞：见 `docs/audit/forum-vuln-lab.md`
 
 ### 待办
-- [ ] 前端页面（Blade + Tailwind + Alpine）：全局布局、认证页、论坛列表/详情/发帖/评论
-- [ ] `docs/audit/forum-audit.md` 与 `vuln-lab` 论坛对照漏洞（存储型 XSS、越权删帖、评论深度绕过等）
-- [ ] 搜索切换到 Meilisearch + Scout（当前为参数绑定的 LIKE，已转义通配符）
+- [ ] 搜索切换到 Meilisearch + Scout（当前为参数绑定的 LIKE，通配符已按字面转义）
+- [ ] 富文本/图片上传与内容治理、通知（被回复/被点赞）
