@@ -18,11 +18,19 @@ use Symfony\Component\HttpFoundation\Response;
  * framework middleware: API calls answer with the project envelope (code 1005)
  * instead of a generic 403 with an untranslated message, while browser
  * requests are sent to the profile page where the resend button lives.
+ *
+ * The gate can be switched off locally (NOIRCAT_REQUIRE_VERIFIED_EMAIL=false)
+ * for a machine that has no way to receive the confirmation mail. Production
+ * ignores that switch: a deployment must never accept unverified writers.
  */
 class EnsureEmailIsVerified
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if (! $this->verificationRequired()) {
+            return $next($request);
+        }
+
         $user = $request->user();
 
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
@@ -38,5 +46,16 @@ class EnsureEmailIsVerified
         }
 
         return $next($request);
+    }
+
+    private function verificationRequired(): bool
+    {
+        // Production is deliberately not configurable here, so a copied .env
+        // cannot silently disable the gate on a public deployment.
+        if (app()->isProduction()) {
+            return true;
+        }
+
+        return (bool) config('noircat.auth.require_verified_email', true);
     }
 }
