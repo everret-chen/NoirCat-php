@@ -95,8 +95,10 @@ class PasswordResetTest extends TestCase
         $this->postJson('/api/auth/password/reset', [
             'email' => 'noir@example.com',
             'token' => $token,
-            'password' => 'Other-secret',
-            'password_confirmation' => 'Other-secret',
+            // Must satisfy the password policy, otherwise validation (3001)
+            // fires before the consumed token is even considered.
+            'password' => '0ther-secret',
+            'password_confirmation' => '0ther-secret',
         ])
             ->assertStatus(422)
             ->assertJsonPath('code', ErrorCode::BUSINESS_RULE_VIOLATION->value);
