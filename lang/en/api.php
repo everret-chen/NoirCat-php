@@ -9,6 +9,8 @@ return [
         'TOKEN_EXPIRED' => 'Your session has expired, please sign in again.',
         'INVALID_CREDENTIALS' => 'Invalid username or password.',
         'ACCOUNT_DISABLED' => 'This account has been disabled.',
+        'EMAIL_NOT_VERIFIED' => 'Please verify your email address first.',
+        'VERIFICATION_LINK_INVALID' => 'The verification link is invalid or has expired.',
 
         // 2xxx authorization
         'FORBIDDEN' => 'You are not allowed to perform this action.',
@@ -35,5 +37,12 @@ return [
         'logged_out' => 'Signed out successfully.',
         'profile_updated' => 'Profile updated.',
         'avatar_updated' => 'Avatar updated.',
+        'password_reset_link_sent' => 'If that address is registered, a reset link has been sent.',
+        'password_reset' => 'Password reset, please sign in again.',
+        'verification_sent' => 'Verification email sent.',
+        'email_verified' => 'Email verified.',
+        'already_verified' => 'This email address is already verified.',
+        'session_revoked' => 'That session has been signed out.',
+        'sessions_revoked' => 'All other sessions have been signed out.',
     ],
 ];

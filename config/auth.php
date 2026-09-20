@@ -90,6 +90,21 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Email Verification
+    |--------------------------------------------------------------------------
+    |
+    | Lifetime in minutes of the signed link sent when verifying an email
+    | address. An emailed link is friendlier with 24 hours than with the
+    | framework default of one hour.
+    |
+    */
+
+    'verification' => [
+        'expire' => (int) env('AUTH_VERIFICATION_EXPIRE', 1440),
+    ],
+
     'passwords' => [
         'users' => [
             'provider' => 'users',

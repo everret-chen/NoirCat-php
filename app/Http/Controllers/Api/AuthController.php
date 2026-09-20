@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Requests\Auth\UploadAvatarRequest;
 use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -20,8 +23,10 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly AuthService $authService)
-    {
+    public function __construct(
+        private readonly AuthService $authService,
+        private readonly SessionService $sessionService,
+    ) {
     }
 
     /**
@@ -100,6 +105,83 @@ class AuthController extends Controller
         $updated = $this->authService->updateAvatar($this->currentUser($request), $file);
 
         return ApiResponse::success(new UserResource($updated), __('api.messages.avatar_updated'));
+    }
+
+    /**
+     * POST /api/auth/password/email
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        /** @var string $email */
+        $email = $request->validated()['email'];
+
+        $this->authService->sendPasswordResetLink($email);
+
+        return ApiResponse::success(null, __('api.messages.password_reset_link_sent'));
+    }
+
+    /**
+     * POST /api/auth/password/reset
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $this->authService->resetPassword($request->validated());
+
+        return ApiResponse::success(null, __('api.messages.password_reset'));
+    }
+
+    /**
+     * GET /api/auth/email/verify/{id}/{hash}
+     */
+    public function verifyEmail(Request $request, int|string $id, string $hash): JsonResponse
+    {
+        $user = $this->authService->verifyEmail($id, $hash);
+
+        return ApiResponse::success(new UserResource($user), __('api.messages.email_verified'));
+    }
+
+    /**
+     * POST /api/auth/email/verification-notification
+     */
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $user = $this->currentUser($request);
+
+        if ($user->hasVerifiedEmail()) {
+            return ApiResponse::success(new UserResource($user), __('api.messages.already_verified'));
+        }
+
+        $this->authService->sendEmailVerification($user);
+
+        return ApiResponse::success(new UserResource($user), __('api.messages.verification_sent'));
+    }
+
+    /**
+     * GET /api/auth/sessions
+     */
+    public function sessions(Request $request): JsonResponse
+    {
+        return ApiResponse::success($this->sessionService->listForApi($this->currentUser($request)));
+    }
+
+    /**
+     * DELETE /api/auth/sessions/{session}
+     */
+    public function destroySession(Request $request, int|string $session): JsonResponse
+    {
+        $this->sessionService->revoke($this->currentUser($request), $session);
+
+        return ApiResponse::success(null, __('api.messages.session_revoked'));
+    }
+
+    /**
+     * DELETE /api/auth/sessions
+     */
+    public function destroyOtherSessions(Request $request): JsonResponse
+    {
+        $revoked = $this->sessionService->revokeOthers($this->currentUser($request));
+
+        return ApiResponse::success(['revoked' => $revoked], __('api.messages.sessions_revoked'));
     }
 
     private function currentUser(Request $request): User

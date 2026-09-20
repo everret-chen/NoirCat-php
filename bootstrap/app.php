@@ -1,7 +1,11 @@
 <?php
 
 use App\Exceptions\ApiExceptionRenderer;
+use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\SetLocale;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +22,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // Locale resolution for both entry points (?lang= / X-Locale / Accept-Language).
         $middleware->web(append: [SetLocale::class]);
         $middleware->api(append: [SetLocale::class]);
+
+        // Project-specific "verified" middleware: answers with error code 1005
+        // instead of the framework's generic 403 message.
+        // spatie/laravel-permission does not register its own aliases, and the
+        // framework's "verified" would answer with an untranslated 403.
+        $middleware->alias([
+            'verified' => EnsureEmailIsVerified::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // API failures always use the { code, message, data } envelope.

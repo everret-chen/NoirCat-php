@@ -57,6 +57,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('search', fn (Request $request) => Limit::perMinute(
             (int) config('noircat.rate_limits.search.per_minute', 60)
         )->by($request->ip()));
+
+        RateLimiter::for('password_reset', fn (Request $request) => Limit::perHour(
+            (int) config('noircat.rate_limits.password_reset.per_hour', 3)
+        )->by($request->ip()));
+
+        RateLimiter::for('email_verification', fn (Request $request) => Limit::perMinute(
+            (int) config('noircat.rate_limits.email_verification.per_minute', 3)
+        )->by($this->limiterKey($request)));
     }
 
     /**

@@ -19,6 +19,7 @@ enum ErrorCode: int
     case TOKEN_EXPIRED = 1002;
     case INVALID_CREDENTIALS = 1003;
     case ACCOUNT_DISABLED = 1004;
+    case EMAIL_NOT_VERIFIED = 1005;
 
     // 2xxx authorization
     case FORBIDDEN = 2001;
@@ -46,7 +47,7 @@ enum ErrorCode: int
         return match ($this) {
             self::SUCCESS => 200,
             self::UNAUTHENTICATED, self::TOKEN_EXPIRED, self::INVALID_CREDENTIALS => 401,
-            self::ACCOUNT_DISABLED, self::FORBIDDEN, self::INSUFFICIENT_ROLE => 403,
+            self::ACCOUNT_DISABLED, self::EMAIL_NOT_VERIFIED, self::FORBIDDEN, self::INSUFFICIENT_ROLE => 403,
             self::VALIDATION_FAILED => 422,
             self::RESOURCE_NOT_FOUND, self::ROUTE_NOT_FOUND => 404,
             self::METHOD_NOT_ALLOWED => 405,

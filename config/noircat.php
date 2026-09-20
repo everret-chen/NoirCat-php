@@ -29,6 +29,8 @@ return [
     |
     */
 
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost:8000')),
+
     'rate_limits' => [
         'api' => ['per_minute' => 120],
         'login' => ['per_minute' => 5, 'per_day' => 50],
@@ -36,6 +38,8 @@ return [
         'posts' => ['per_minute' => 10],
         'uploads' => ['per_hour' => 20],
         'search' => ['per_minute' => 60],
+        'password_reset' => ['per_hour' => 3],
+        'email_verification' => ['per_minute' => 3],
     ],
 
     /*
