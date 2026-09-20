@@ -59,3 +59,22 @@
 2. **断言也会骗人**：框架在单次测试内复用 guard 状态，安全类断言必须让状态重新走完整路径。
 3. **限流既是被测对象也是测试约束**，应当把限流本身作为断言目标，而不是绕过它。
 4. **迁移只能新增**：规格演进时用「新增字段 → 回填 → 收紧约束 → 删旧列」四步，保证既有数据可迁移。
+
+## 5. 收尾补充（邮箱验证 / 密码重置 / 会话管理）
+
+| 检查项 | 结论 | 落点 |
+|---|---|---|
+| 验证链接可否伪造 | ✅ `signed` 中间件（签名 + 过期）+ `sha1(email)` 哈希比对，两者都通过才生效 | `AuthService::verifyEmail` |
+| 验证链接是否绑定收件邮箱 | ✅ 哈希取自该用户的邮箱；改 hash 即 403 并写失败审计 | 同上 |
+| 链接有效期 | ✅ 默认 24 小时（`auth.verification.expire`，可用 `AUTH_VERIFICATION_EXPIRE` 调整） | `config/auth.php` |
+| 重置请求可否枚举邮箱 | ✅ 邮箱存在与否都返回同一文案；未注册只写失败审计、不发信 | `AuthService::sendPasswordResetLink` |
+| 重置令牌可否重放 | ✅ 用框架 broker：一次性、60 分钟过期、60 秒节流 | `Password::broker()` |
+| 重置后旧会话 | ✅ 吊销该用户**全部**令牌 | `AuthService::resetPassword` |
+| 重置接口可否爆破 | ✅ `throttle:password_reset` 3 次/小时/IP | `AppServiceProvider` |
+| 会话列表越权 | ✅ 只列本人令牌，并标记当前会话 | `SessionService::listForApi` |
+| 吊销他人会话 | ✅ 查询经 `$user->tokens()` 作用域，跨用户 ID **结构性地返回 404**，不依赖人工判断 | `SessionService::revoke` |
+| 未验证邮箱访问受保护接口 | ✅ 自实现 `verified` 中间件返回 `403/1005`（而非框架未翻译的 403） | `EnsureEmailIsVerified` |
+| 权限中间件接线 | ✅ 显式注册 spatie 别名；API 路由写 `permission:xxx,sanctum`（guard 参数只用于取用户，权限判定走用户自身 guard）；无权限 `403/2001`、未登录 `401/1001` | `bootstrap/app.php` |
+
+**已知开发期风险（生产必须处理）**：本地 `MAIL_MAILER=log`，验证与重置链接会写入 `storage/logs/laravel.log`。
+生产环境必须改用真实邮件通道，并且不应让含一次性令牌的链接长期留在日志里。

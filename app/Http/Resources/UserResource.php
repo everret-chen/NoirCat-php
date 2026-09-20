@@ -26,6 +26,7 @@ class UserResource extends JsonResource
             'avatar_url' => $this->avatar === null
                 ? null
                 : Storage::disk(AuthService::AVATAR_DISK)->url($this->avatar),
+            'email_verified' => $this->hasVerifiedEmail(),
             'role' => $this->role->value,
             'roles' => $this->getRoleNames()->all(),
             'permissions' => $this->getAllPermissions()->pluck('name')->all(),

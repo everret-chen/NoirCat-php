@@ -9,6 +9,8 @@ return [
         'TOKEN_EXPIRED' => '登录状态已过期，请重新登录',
         'INVALID_CREDENTIALS' => '用户名或密码错误',
         'ACCOUNT_DISABLED' => '账号已被禁用',
+        'EMAIL_NOT_VERIFIED' => '请先完成邮箱验证',
+        'VERIFICATION_LINK_INVALID' => '验证链接无效或已过期',
 
         // 2xxx authorization
         'FORBIDDEN' => '没有权限执行该操作',
@@ -35,5 +37,12 @@ return [
         'logged_out' => '已退出登录',
         'profile_updated' => '资料已更新',
         'avatar_updated' => '头像已更新',
+        'password_reset_link_sent' => '如果该邮箱已注册，我们已发送重置链接',
+        'password_reset' => '密码已重置，请重新登录',
+        'verification_sent' => '验证邮件已发送',
+        'email_verified' => '邮箱验证成功',
+        'already_verified' => '邮箱已经验证过了',
+        'session_revoked' => '该登录设备已下线',
+        'sessions_revoked' => '其它登录设备已全部下线',
     ],
 ];

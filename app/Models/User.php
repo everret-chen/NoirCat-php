@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -23,7 +26,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
@@ -65,6 +68,22 @@ class User extends Authenticatable
     public function auditLogs(): MorphMany
     {
         return $this->morphMany(AuditLog::class, 'auditable');
+    }
+
+    /**
+     * Send the localized email verification notification.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification());
+    }
+
+    /**
+     * Send the localized password reset notification.
+     */
+    public function sendPasswordResetNotification(mixed $token): void
+    {
+        $this->notify(new ResetPasswordNotification((string) $token));
     }
 
     public function isAdmin(): bool

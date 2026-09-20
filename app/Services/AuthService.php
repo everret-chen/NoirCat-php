@@ -9,9 +9,12 @@ use App\Enums\UserRole;
 use App\Exceptions\BusinessException;
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\TransientToken;
@@ -65,6 +68,12 @@ class AuthService
             $user,
             $user->id,
         );
+
+        event(new Registered($user));
+
+        // Sent synchronously for now; move the notifications onto the queue
+        // once a worker is part of the deployment.
+        $user->sendEmailVerificationNotification();
 
         return $user;
     }
@@ -200,6 +209,83 @@ class AuthService
      * Record the failed attempt and abort with a message that does not reveal
      * whether the account exists.
      */
+    /**
+     * Send a password reset link.
+     *
+     * Whether the address is registered must not be observable, so the caller
+     * always reports success.
+     */
+    public function sendPasswordResetLink(string $email): void
+    {
+        $status = Password::broker()->sendResetLink(['email' => $email]);
+
+        $this->auditLogs->record(
+            'auth.password.reset_requested',
+            ['email' => $email, 'broker_status' => $status],
+            $status === Password::RESET_LINK_SENT ? AuditLog::RESULT_SUCCESS : AuditLog::RESULT_FAILURE,
+        );
+    }
+
+    /**
+     * Complete a password reset and drop every existing session.
+     *
+     * @param  array<string, mixed>  $credentials
+     */
+    public function resetPassword(array $credentials): User
+    {
+        $status = Password::broker()->reset($credentials, function (User $user, string $password): void {
+            $user->forceFill(['password' => $password])->save();
+            $user->tokens()->delete();
+        });
+
+        $email = (string) ($credentials['email'] ?? '');
+        $user = User::query()->where('email', $email)->first();
+
+        if ($status !== Password::PASSWORD_RESET || $user === null) {
+            $this->auditLogs->recordFailure('auth.password.reset', ['email' => $email]);
+
+            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __($status), 422);
+        }
+
+        $this->auditLogs->record('auth.password.reset', [], AuditLog::RESULT_SUCCESS, $user, $user->id);
+
+        return $user;
+    }
+
+    /**
+     * Send (or resend) the email verification notification.
+     */
+    public function sendEmailVerification(User $user): void
+    {
+        $user->sendEmailVerificationNotification();
+
+        $this->auditLogs->record('auth.email.verification_sent', [], AuditLog::RESULT_SUCCESS, $user, $user->id);
+    }
+
+    /**
+     * Verify an email address from a signed link.
+     */
+    public function verifyEmail(int|string $id, string $hash): User
+    {
+        $user = User::query()->findOrFail($id);
+
+        if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+            $this->auditLogs->recordFailure('auth.email.verify_failed', [], $user, $user->id);
+
+            throw new BusinessException(ErrorCode::FORBIDDEN, __('api.errors.VERIFICATION_LINK_INVALID'), 403);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+
+            event(new Verified($user));
+
+            $this->auditLogs->record('auth.email.verified', [], AuditLog::RESULT_SUCCESS, $user, $user->id);
+        }
+
+        return $user;
+    }
+
     private function reject(string $account): never
     {
         $this->auditLogs->recordFailure('auth.login', ['account' => $account]);
