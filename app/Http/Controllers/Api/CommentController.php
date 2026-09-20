@@ -27,6 +27,10 @@ class CommentController extends Controller
      */
     public function index(Post $post): JsonResponse
     {
+        // Drafts are visible to their author and to moderators only; the thread
+        // must not be readable just because the id was guessed.
+        $this->authorize('view', $post);
+
         $comments = $post->comments()
             ->where('status', Comment::STATUS_VISIBLE)
             ->with('author:id,username,avatar')
@@ -42,6 +46,8 @@ class CommentController extends Controller
      */
     public function store(StoreCommentRequest $request, Post $post): JsonResponse
     {
+        $this->authorize('comment', $post);
+
         $author = $request->user();
         \assert($author instanceof \App\Models\User);
 
