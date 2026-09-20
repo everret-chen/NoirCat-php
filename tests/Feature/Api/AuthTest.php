@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Enums\ErrorCode;
+use App\Enums\Permission;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\User;
