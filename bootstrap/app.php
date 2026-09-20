@@ -3,6 +3,7 @@
 use App\Exceptions\ApiExceptionRenderer;
 use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\UseSanctumGuard;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -21,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Locale resolution for both entry points (?lang= / X-Locale / Accept-Language).
         $middleware->web(append: [SetLocale::class]);
+        // Token first, then locale: public API endpoints must still recognise a
+        // bearer token so policies can tell an author from a guest.
+        $middleware->api(prepend: [UseSanctumGuard::class]);
         $middleware->api(append: [SetLocale::class]);
 
         // Project-specific "verified" middleware: answers with error code 1005

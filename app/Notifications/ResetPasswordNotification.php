@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -15,7 +16,7 @@ use Illuminate\Notifications\Notification;
  * so a single-page frontend can post them back to
  * POST /api/auth/password/reset.
  */
-class ResetPasswordNotification extends Notification
+class ResetPasswordNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

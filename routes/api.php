@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\SearchController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,6 +63,49 @@ Route::prefix('auth')->name('api.auth.')->group(function (): void {
             ->middleware('throttle:uploads')
             ->name('avatar');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Forum
+|--------------------------------------------------------------------------
+|
+| Public reads, authenticated writes. Write endpoints carry the "posts"
+| limiter; moderation is authorised through PostPolicy / CommentPolicy, which
+| map onto the post:* and comment:* permissions.
+|
+*/
+
+Route::get('/categories', [CategoryController::class, 'index'])->name('api.categories.index');
+Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:search')->name('api.search');
+Route::get('/posts', [PostController::class, 'index'])->name('api.posts.index');
+Route::get('/posts/{post}', [PostController::class, 'show'])->name('api.posts.show');
+Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name('api.posts.comments.index');
+
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::post('/posts', [PostController::class, 'store'])
+        ->middleware('throttle:posts')
+        ->name('api.posts.store');
+
+    Route::put('/posts/{post}', [PostController::class, 'update'])
+        ->middleware('throttle:posts')
+        ->name('api.posts.update');
+
+    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('api.posts.destroy');
+    Route::post('/posts/{post}/pin', [PostController::class, 'pin'])->name('api.posts.pin');
+
+    Route::post('/posts/{post}/like', [PostController::class, 'like'])
+        ->middleware('throttle:posts')
+        ->name('api.posts.like');
+
+    Route::delete('/posts/{post}/like', [PostController::class, 'unlike'])->name('api.posts.unlike');
+
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store'])
+        ->middleware('throttle:posts')
+        ->name('api.posts.comments.store');
+
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('api.comments.destroy');
+    Route::post('/comments/{comment}/hide', [CommentController::class, 'hide'])->name('api.comments.hide');
 });
 
 /*

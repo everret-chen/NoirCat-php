@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +24,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->configureEloquentStrictness();
+    }
+
+    /**
+     * Silently discarded attributes are a real bug class here: a derived column
+     * (like posts.content_html) missing from $fillable would otherwise vanish
+     * without a trace. Outside production this becomes a loud error instead.
+     */
+    private function configureEloquentStrictness(): void
+    {
+        Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
     }
 
     /**
