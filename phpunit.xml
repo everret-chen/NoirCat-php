@@ -27,6 +27,8 @@
         <env name="APP_LOCALE" value="zh_CN"/>
         <env name="APP_FALLBACK_LOCALE" value="en"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Pinned so a local .env cannot relax the mailbox gate inside tests. -->
+        <env name="NOIRCAT_REQUIRE_VERIFIED_EMAIL" value="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

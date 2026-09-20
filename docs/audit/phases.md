@@ -117,6 +117,23 @@
 - [x] 真实 HTTP 端到端冒烟（Cookie + CSRF + 签名链接，共 52 项断言）全部通过
 - [x] `vuln-lab` 论坛对照漏洞：见 `docs/audit/forum-vuln-lab.md`
 
+### 邮箱验证可用的本地闭环（本轮）
+- [x] 定位"注册后收不到验证邮件"的根因：邮件是 `ShouldQueue` + `QUEUE_CONNECTION=database`，
+      没跑 `queue:work` 时只会堆在 `jobs` 表里（实测积压 12 封、`attempts=0`），日志里当然一条都没有
+- [x] `php artisan noircat:mail:latest`：直接从邮件日志里提取最新的验证/重置链接（默认 3 条，新的在前），
+      解析逻辑抽到 `App\Services\MailLogReader`（处理 HTML 实体、正文/HTML 重复、quoted-printable 软换行，
+      且不误伤 `expires=1789…` 这种"看起来像转义"的字面等号）；顺带提示 `jobs` 表还有多少封未投递
+- [x] `php artisan noircat:user:create {email} --username= --password= --role= --unverified`：
+      命令行建号（首个管理员入口），默认**已验证**、写审计 `auth.user.created`、密码省略时随机生成并只打印一次
+- [x] 本地门槛开关：`NOIRCAT_REQUIRE_VERIFIED_EMAIL=false` 可关闭论坛写接口的邮箱验证要求；
+      **生产环境忽略该开关**（`EnsureEmailIsVerified` 在 production 下恒为强制）
+- [x] 新增测试：`NoircatCommandsTest`（6 例）、`VerifiedGateTest`（4 例，含"生产忽略开关"）、`MailLogReaderTest`（6 例）
+- [x] README 补"收不到验证邮件怎么办"三步排查与 Mailpit 接法
+
 ### 待办
 - [ ] 搜索切换到 Meilisearch + Scout（当前为参数绑定的 LIKE，通配符已按字面转义）
 - [ ] 富文本/图片上传与内容治理、通知（被回复/被点赞）
+- [ ] 邮箱硬化（已取证，未修）：
+      - 改邮箱后 `email_verified_at` 不失效 → 验证一次后换任意邮箱仍算已验证（`AuthService::updateProfile`）
+      - 邮箱未规范化：`A@x.com` 与 `a@x.com` 可注册成两个账号，且用邮箱登录时大小写敏感
+      - `email_verification` 只有每账号 3 次/分钟，缺每日上限与队列去重

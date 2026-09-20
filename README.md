@@ -40,6 +40,60 @@ php artisan serve            # http://localhost:8000
 php artisan queue:work
 ```
 
+### 收不到验证邮件？
+
+按这个顺序排查（**没跑 worker 是头号原因**：邮件只会躺在 `jobs` 表里，哪儿都不会出现）：
+
+1. 先把积压的邮件投递出去：
+
+   ```bash
+   php artisan queue:work --stop-when-empty   # 或在另一个终端常驻 queue:work
+   ```
+
+2. 直接把最新的验证 / 重置链接打印出来（本地 `MAIL_MAILER=log`，信件落在 `storage/logs/laravel.log`）：
+
+   ```bash
+   php artisan noircat:mail:latest            # 打印最近 3 条，点开即可验证
+   ```
+
+   命令会顺带提醒 `jobs` 表里还有多少封没投递。
+
+3. 想要"真的在邮箱里看到信"：本机装 [Mailpit](https://mailpit.axllent.org/)（单文件可执行，**不需要 Docker**），
+   然后把 `.env` 改成：
+
+   ```ini
+   MAIL_MAILER=smtp
+   MAIL_HOST=127.0.0.1
+   MAIL_PORT=1025      # Mailpit 的 SMTP 端口
+   ```
+
+   收件箱 UI 在 `http://127.0.0.1:8025`。要用真实邮箱（QQ / Gmail 授权码、企业邮、云邮件推送），
+   把上面的 SMTP 换成对应的 host / port / 用户名 / 授权码即可，**凭据只写 `.env`，不要提交**。
+
+### 首个管理员账号
+
+种子数据只建角色与权限，**不含任何默认账号**（安全基线）。第一个管理员用命令创建：
+
+```bash
+php artisan noircat:user:create admin@noircat.local --username=admin --role=admin
+# 密码自动生成并只打印一次；--unverified 可保留未验证状态
+# --role=user|moderator|guild_admin|admin
+```
+
+控制台创建的账号由操作者背书邮箱真实性，因此**默认标记为已验证**，可以直接发帖、置顶。
+
+### 本地关掉邮箱验证门槛
+
+论坛写接口默认要求邮箱已验证（API `403/1005`，网页跳 `/profile` 提示）。
+本机没有邮件通道时，可以在 `.env` 里关掉：
+
+```ini
+NOIRCAT_REQUIRE_VERIFIED_EMAIL=false
+```
+
+**生产环境忽略这个开关**：`APP_ENV=production` 时 `verified` 中间件始终生效，
+避免复制 `.env` 时把门槛一起带上线（`config/noircat.php` 的 `auth.require_verified_email`）。
+
 前端资源（Tailwind v4 + Vite）：
 
 ```bash

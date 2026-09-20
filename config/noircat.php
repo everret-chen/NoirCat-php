@@ -31,6 +31,22 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost:8000')),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Mailbox Verification Gate
+    |--------------------------------------------------------------------------
+    |
+    | When true, the "verified" middleware refuses forum writes from accounts
+    | whose email address is not confirmed yet. Local setups without a mail
+    | channel can set NOIRCAT_REQUIRE_VERIFIED_EMAIL=false to keep working;
+    | production always enforces the gate (see EnsureEmailIsVerified).
+    |
+    */
+
+    'auth' => [
+        'require_verified_email' => env('NOIRCAT_REQUIRE_VERIFIED_EMAIL', true),
+    ],
+
     'rate_limits' => [
         'api' => ['per_minute' => 120],
         'login' => ['per_minute' => 5, 'per_day' => 50],
