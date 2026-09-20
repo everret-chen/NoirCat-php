@@ -47,11 +47,20 @@
     }
 }
 
-@layer components {
-    .btn {
-        @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition;
-    }
+/*
+ * Shared building blocks are declared with @utility (not a plain component
+ * class) so that Tailwind v4 accepts them inside another @apply: the engine
+ * only resolves real utilities there.
+ */
+@utility btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition;
+}
 
+@utility badge {
+    @apply inline-flex items-center rounded px-2 py-0.5 text-xs text-ink-200;
+}
+
+@layer components {
     .btn-primary {
         @apply btn bg-frost-500 text-ink-950 hover:bg-frost-400;
     }
@@ -74,10 +83,6 @@
 
     .label {
         @apply mb-1.5 block text-sm text-ink-200;
-    }
-
-    .badge {
-        @apply inline-flex items-center rounded px-2 py-0.5 text-xs text-ink-200;
     }
 
     .badge-pin {
