@@ -41,6 +41,35 @@ class AuthTest extends TestCase
         ], $overrides);
     }
 
+    // ------------------------------------------------- 越权类负向用例（硬约束）
+
+    public function test_registration_cannot_assign_a_role(): void
+    {
+        // Privilege escalation attempt: the client asks for the admin role.
+        $this->postJson('/api/auth/register', $this->payload(['role' => 'admin']))->assertCreated();
+
+        $user = User::query()->where('username', 'noircat')->firstOrFail();
+
+        $this->assertSame(UserRole::USER->value, $user->role->value);
+        $this->assertTrue($user->hasRole(UserRole::USER->value));
+        $this->assertFalse($user->hasRole(UserRole::ADMIN->value));
+        $this->assertFalse($user->can(Permission::USER_MANAGE->value));
+    }
+
+    public function test_profile_update_cannot_target_another_user(): void
+    {
+        $victim = User::factory()->create(['email' => 'victim@example.com']);
+        $attacker = User::factory()->create(['email' => 'attacker@example.com']);
+
+        $this->withToken($this->tokenFor($attacker))->putJson('/api/auth/profile', [
+            'user_id' => $victim->id,
+            'email' => 'pwned@example.com',
+        ])->assertOk();
+
+        // The caller may change their own profile; the victim must stay untouched.
+        $this->assertSame('victim@example.com', $victim->refresh()->email);
+        $this->assertDatabaseMissing('users', ['id' => $victim->id, 'email' => 'pwned@example.com']);
+    }
     private function tokenFor(User $user, string $device = 'phpunit'): string
     {
         return $user->createToken($device)->plainTextToken;
