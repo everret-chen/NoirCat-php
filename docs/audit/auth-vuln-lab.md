@@ -5,7 +5,7 @@
 
 - **基线**：`main` 上已审计的认证模块（含邮箱验证 / 密码重置 / 会话管理），见 [auth-audit.md](auth-audit.md)
 - **构造方式**：本分支 = `main` + 一个漏洞提交，共注入 **V1–V11**，每处都带 `// VULN:` 注释便于定位
-- **验证方式**：`php artisan test` → **14 个用例由绿转红**，即为漏洞可被检测的证据
+- **验证方式**：`php artisan test` → 认证部分 **14 个用例由绿转红**（本分支还包含论坛漏洞 V12–V21，全量为 **38 failed / 77 passed**）
 
 ## 漏洞清单
 
@@ -19,7 +19,7 @@
 | V6 | 资料更新 IDOR | 水平越权：改他人邮箱/密码 → 接管账号 | `AuthController::updateProfile`、`UpdateProfileRequest` | 带 `"user_id":<他人ID>` 调 `PUT /api/auth/profile` | 只操作 `$request->user()`，不接受 `user_id` |
 | V7 | 任意文件上传 | 上传 `.php` 得到 webshell（经 `public/storage` 访问） | `AuthService::updateAvatar`、`UploadAvatarRequest` | 上传 `shell.php` 成功落盘 | `image` + `mimes:jpg,jpeg,png,webp` + ≤2 MB，文件名/扩展名取自检测到的 MIME |
 | V8 | 会话管理越权 | 列出**所有人**的会话；可把**任意用户**踢下线 | `SessionService::list` / `revoke` | `GET /api/auth/sessions` 返回他人会话；`DELETE /api/auth/sessions/{他人令牌ID}` 成功 | 查询经 `$user->tokens()` 作用域，跨用户 ID 结构性返回 404 |
-| V9 | 邮箱验证绕过 | 去掉签名与哈希校验后，任何人可构造链接**替他人验证邮箱** | `routes/api.php`、`AuthService::verifyEmail` | 直接访问 `/api/auth/email/verify/{任意ID}/{任意hash}` 即返回成功 | `signed` 中间件（签名 + 过期）+ `sha1(email)` 哈希比对 |
+| V9 | 邮箱验证绕过 | 去掉签名与哈希校验后，任何人可构造链接**替他人验证邮箱** | `routes/api.php`、`routes/web.php`、`AuthService::verifyEmail` | 直接访问 `/email/verify/{任意ID}/{任意hash}`（或 API 同名路径）即返回成功 | `signed` 中间件（签名 + 过期）+ `sha1(email)` 哈希比对 |
 | V10 | 重置令牌可重用且不过期 | 邮件被转发或日志泄露后，**同一链接可无限次改密码** | `AuthService::resetPassword` | 用同一 token 连续两次调用 `POST /api/auth/password/reset` 都成功 | 框架 broker：一次性消费、60 分钟过期、60 秒节流 |
 | V11 | 重置接口无限流 | 重置邮件轰炸（受害者邮箱被刷爆）、重置接口可爆破 | `routes/api.php` | 连续 POST `/api/auth/password/email` 不再返回 429 | `throttle:password_reset` 3 次/小时/IP |
 
@@ -38,10 +38,11 @@ FAILED  SessionTest > sessions are listed for the caller only       ← V8
 FAILED  SessionTest > another users session cannot be revoked       ← V8
 FAILED  EmailVerificationTest > a link whose hash does not mat…     ← V9
 FAILED  EmailVerificationTest > unsigned and expired links are…     ← V9
+FAILED  WebPagesTest > an unsigned verification link is rejected     ← V9（邮件链接改走 Blade 路由后新增）
 FAILED  PasswordResetTest > a reset token cannot be used twice      ← V10
 FAILED  PasswordResetTest > the reset request endpoint is rate…     ← V11
 
-Tests: 14 failed, 51 passed (244 assertions)
+（认证模块单独统计为 14 例转红；本分支加入论坛漏洞 V12–V21 后全量为 38 failed, 77 passed, 397 assertions）
 ```
 
 ## 三类视角

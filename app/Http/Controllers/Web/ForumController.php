@@ -174,8 +174,7 @@ class ForumController extends Controller
 
     public function comment(StoreCommentRequest $request, Post $post): RedirectResponse
     {
-        $this->authorize('comment', $post);
-
+        // VULN: no comment check - drafts accept comments too.
         $author = $request->user();
         \assert($author instanceof User);
 

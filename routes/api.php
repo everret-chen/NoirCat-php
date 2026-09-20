@@ -70,8 +70,7 @@ Route::prefix('auth')->name('api.auth.')->group(function (): void {
 | Forum
 |--------------------------------------------------------------------------
 |
-| Public reads, authenticated writes. Write endpoints additionally require a
-| verified email address (error code 1005 otherwise) and carry the "posts"
+| Public reads, authenticated writes. Write endpoints carry the "posts"
 | limiter; moderation is authorised through PostPolicy / CommentPolicy, which
 | map onto the post:* and comment:* permissions.
 |
@@ -85,11 +84,13 @@ Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name(
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/posts', [PostController::class, 'store'])
-        ->middleware(['verified', 'throttle:posts'])
+        // VULN: no verified gate - an unverified account can write.
+        ->middleware('throttle:posts')
         ->name('api.posts.store');
 
     Route::put('/posts/{post}', [PostController::class, 'update'])
-        ->middleware(['verified', 'throttle:posts'])
+        // VULN: no verified gate - an unverified account can write.
+        ->middleware('throttle:posts')
         ->name('api.posts.update');
 
     // Deletion is not gated on the mailbox check, so moderation keeps working.
@@ -97,15 +98,18 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/posts/{post}/pin', [PostController::class, 'pin'])->name('api.posts.pin');
 
     Route::post('/posts/{post}/like', [PostController::class, 'like'])
-        ->middleware(['verified', 'throttle:posts'])
+        // VULN: no verified gate - an unverified account can write.
+        ->middleware('throttle:posts')
         ->name('api.posts.like');
 
     Route::delete('/posts/{post}/like', [PostController::class, 'unlike'])
-        ->middleware(['verified', 'throttle:posts'])
+        // VULN: no verified gate - an unverified account can write.
+        ->middleware('throttle:posts')
         ->name('api.posts.unlike');
 
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])
-        ->middleware(['verified', 'throttle:posts'])
+        // VULN: no verified gate - an unverified account can write.
+        ->middleware('throttle:posts')
         ->name('api.posts.comments.store');
 
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('api.comments.destroy');

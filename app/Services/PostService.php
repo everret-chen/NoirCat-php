@@ -11,7 +11,6 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -113,11 +112,11 @@ class PostService
     public function like(User $user, Post $post): Post
     {
         return DB::transaction(function () use ($user, $post): Post {
-            $created = $post->likes()->firstOrCreate(['user_id' => $user->id]);
-
-            if ($created->wasRecentlyCreated) {
-                $post->increment('like_count');
-            }
+            // VULN: the counter is incremented on every request instead of only
+            // when the like row is first created, so repeating the call
+            // inflates like_count without adding a row.
+            $post->likes()->firstOrCreate(['user_id' => $user->id]);
+            $post->increment('like_count');
 
             return $post->refresh();
         });
@@ -142,11 +141,9 @@ class PostService
      */
     public function recordView(Post $post, string $visitor): void
     {
-        $key = 'post-view:'.$post->id.':'.sha1($visitor);
-
-        if (Cache::add($key, true, now()->addHour())) {
-            $post->increment('view_count');
-        }
+        // VULN: no per visitor de-duplication, so refreshing the page (or a
+        // script) inflates view_count without limit.
+        $post->increment('view_count');
     }
 
     /**
@@ -157,8 +154,10 @@ class PostService
     {
         $query = Post::query()->with(['author:id,username,avatar', 'category']);
 
+        // VULN: the published filter is gone, so drafts leak into every public
+        // listing (and into search results).
         if (! ($filters['include_unpublished'] ?? false)) {
-            $query->published();
+            $query->orderBy('id');
         }
 
         if (isset($filters['category'])) {
@@ -190,25 +189,18 @@ class PostService
     }
 
     /**
-     * Simple, parameter bound LIKE search.
-     *
-     * Wildcards in user input are neutralised with an explicit ESCAPE
-     * character. Relying on a bare backslash only works on MySQL: SQLite has no
-     * default escape character for LIKE, so a term like "100%" would match
-     * nothing at all there.
-     *
-     * Meilisearch replaces this in the search phase.
+     * VULN: the search term is dropped into the LIKE pattern as-is, so "%" or
+     * "_" from the query string act as wildcards ("%" matches every row).
      *
      * @param  \Illuminate\Database\Eloquent\Builder<Post>  $query
      */
     private function applySearch(\Illuminate\Database\Eloquent\Builder $query, string $term): void
     {
-        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term);
-        $pattern = '%'.$escaped.'%';
+        $pattern = '%'.$term.'%';
 
         $query->where(function ($builder) use ($pattern): void {
-            $builder->whereRaw("title LIKE ? ESCAPE '!'", [$pattern])
-                ->orWhereRaw("content LIKE ? ESCAPE '!'", [$pattern]);
+            $builder->where('title', 'like', $pattern)
+                ->orWhere('content', 'like', $pattern);
         });
     }
 

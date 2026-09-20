@@ -16,34 +16,21 @@ class PostPolicy
      */
     public function view(?User $user, Post $post): bool
     {
-        if ($post->isPublished()) {
-            return true;
-        }
-
-        if ($user === null) {
-            return false;
-        }
-
-        return $user->id === $post->author_id || $user->can(Permission::POST_DELETE_ANY->value);
+        // VULN: drafts are readable by anyone who guesses the id.
+        return true;
     }
 
     public function update(User $user, Post $post): bool
     {
-        if ($user->id === $post->author_id && $user->can(Permission::POST_UPDATE_OWN->value)) {
-            return true;
-        }
-
-        // Moderators and admins may edit any post.
-        return $user->can(Permission::POST_DELETE_ANY->value);
+        // VULN: no ownership and no permission check - any account can edit any
+        // post, including drafts it does not own.
+        return true;
     }
 
     public function delete(User $user, Post $post): bool
     {
-        if ($user->id === $post->author_id && $user->can(Permission::POST_DELETE_OWN->value)) {
-            return true;
-        }
-
-        return $user->can(Permission::POST_DELETE_ANY->value);
+        // VULN: any account can delete any post.
+        return true;
     }
 
     public function pin(User $user, Post $post): bool
@@ -90,7 +77,9 @@ class PostPolicy
      */
     public function comment(User $user, Post $post): bool
     {
-        return $post->isPublished() && ! $post->isLocked();
+        // VULN: comments are accepted on drafts too, so an account can attach
+        // content to a post it is not supposed to know exists.
+        return true;
     }
 
     public function report(User $user, Post $post): bool

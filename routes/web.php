@@ -26,23 +26,26 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Forum -----------------------------------------------------------------
 Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
-// Writing requires a verified address; reading stays open to everyone. The
-// "verified" gate is what makes the mail confirmation step meaningful.
+// VULN: writing no longer requires a verified address.
 Route::get('/forum/create', [ForumController::class, 'create'])
-    ->middleware(['auth', 'verified'])
+    // VULN: no verified gate.
+    ->middleware('auth')
     ->name('forum.create');
 
 Route::post('/forum', [ForumController::class, 'store'])
-    ->middleware(['auth', 'verified', 'throttle:posts'])
+    // VULN: no verified gate - an unverified account can write.
+    ->middleware(['auth', 'throttle:posts'])
     ->name('forum.store');
 
 Route::get('/forum/{post}', [ForumController::class, 'show'])->name('forum.show');
 Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])
-    ->middleware(['auth', 'verified'])
+    // VULN: no verified gate.
+    ->middleware('auth')
     ->name('forum.edit');
 
 Route::put('/forum/{post}', [ForumController::class, 'update'])
-    ->middleware(['auth', 'verified', 'throttle:posts'])
+    // VULN: no verified gate - an unverified account can write.
+    ->middleware(['auth', 'throttle:posts'])
     ->name('forum.update');
 
 // Deleting stays available without the gate: a moderator must be able to
@@ -50,14 +53,17 @@ Route::put('/forum/{post}', [ForumController::class, 'update'])
 Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->middleware('auth')->name('forum.destroy');
 
 Route::post('/forum/{post}/comments', [ForumController::class, 'comment'])
-    ->middleware(['auth', 'verified', 'throttle:posts'])
+    // VULN: no verified gate - an unverified account can write.
+    ->middleware(['auth', 'throttle:posts'])
     ->name('forum.comments.store');
 
 Route::post('/forum/{post}/like', [ForumController::class, 'like'])
-    ->middleware(['auth', 'verified', 'throttle:posts'])
+    // VULN: no verified gate - an unverified account can write.
+    ->middleware(['auth', 'throttle:posts'])
     ->name('forum.like');
 Route::delete('/forum/{post}/like', [ForumController::class, 'unlike'])
-    ->middleware(['auth', 'verified', 'throttle:posts'])
+    // VULN: no verified gate - an unverified account can write.
+    ->middleware(['auth', 'throttle:posts'])
     ->name('forum.unlike');
 
 // Reporting is a member action: an account and a verified address are enough.

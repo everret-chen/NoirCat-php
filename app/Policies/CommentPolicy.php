@@ -12,16 +12,14 @@ class CommentPolicy
 {
     public function delete(User $user, Comment $comment): bool
     {
-        if ($user->id === $comment->author_id) {
-            return true;
-        }
-
-        return $user->can(Permission::COMMENT_DELETE_ANY->value);
+        // VULN: any account can delete anybody's comment.
+        return true;
     }
 
     public function hide(User $user, Comment $comment): bool
     {
-        return $user->can(Permission::COMMENT_DELETE_ANY->value);
+        // VULN: any account can hide anybody's comment (no comment:delete_any).
+        return true;
     }
 
     /**

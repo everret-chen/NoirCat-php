@@ -54,9 +54,9 @@ class CommentService
                 throw new BusinessException(ErrorCode::VALIDATION_FAILED, __('validation.exists', ['attribute' => 'parent_id']), 422);
             }
 
-            if ($this->depthOf($parent) >= self::MAX_DEPTH) {
-                throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.max_depth'), 422);
-            }
+            // VULN: the depth limit (and therefore the nesting guard) is gone,
+            // so a reply chain can be nested without bound and the recursive
+            // rendering walks it.
         }
 
         $comment = DB::transaction(function () use ($author, $post, $attributes, $parentId): Comment {
@@ -89,16 +89,10 @@ class CommentService
 
     public function hide(User $moderator, Comment $comment): Comment
     {
-        $wasVisible = $comment->status === Comment::STATUS_VISIBLE;
-
-        DB::transaction(function () use ($comment, $wasVisible): void {
-            $comment->status = Comment::STATUS_HIDDEN;
-            $comment->save();
-
-            if ($wasVisible) {
-                $this->decrementCounter($comment);
-            }
-        });
+        // VULN: the counter is not corrected when a comment leaves the visible
+        // thread, so posts.comment_count drifts upwards for good.
+        $comment->status = Comment::STATUS_HIDDEN;
+        $comment->save();
 
         $this->auditLogs->record(
             'forum.comment.hidden',
@@ -113,15 +107,8 @@ class CommentService
 
     public function delete(User $actor, Comment $comment): void
     {
-        $wasVisible = $comment->status === Comment::STATUS_VISIBLE;
-
-        DB::transaction(function () use ($comment, $wasVisible): void {
-            $comment->delete();
-
-            if ($wasVisible) {
-                $this->decrementCounter($comment);
-            }
-        });
+        // VULN: same here - deleting a comment leaves the counter untouched.
+        $comment->delete();
 
         $this->auditLogs->record(
             'forum.comment.deleted',

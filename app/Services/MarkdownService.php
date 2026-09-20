@@ -36,8 +36,10 @@ class MarkdownService
     public function __construct()
     {
         $environment = new Environment([
-            'html_input' => 'strip',
-            'allow_unsafe_links' => false,
+            // VULN: raw HTML from the author is passed through, and unsafe link
+            // schemes are allowed, so a post body can carry a script payload.
+            'html_input' => 'allow',
+            'allow_unsafe_links' => true,
             'max_nesting_level' => 50,
         ]);
 
@@ -63,9 +65,9 @@ class MarkdownService
 
     public function toHtml(string $markdown): string
     {
-        $html = (string) $this->converter->convert($markdown);
-
-        return $this->purifier->purify($html);
+        // VULN: the HTMLPurifier pass is skipped, so the Markdown layer is the
+        // only thing standing between a post body and the browser.
+        return (string) $this->converter->convert($markdown);
     }
 
     /**
