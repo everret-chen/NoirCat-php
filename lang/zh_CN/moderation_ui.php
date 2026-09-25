@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'nav' => [
+        'moderation' => '治理台',
+        'trash' => '回收站',
+    ],
+    'reports' => [
+        'title' => '举报队列',
+        'subtitle' => '待处理 :count 条',
+        'empty' => '当前没有待处理的举报。',
+        'filter_status' => '状态',
+        'filter_reason' => '原因',
+        'status_all' => '全部',
+        'reporter' => '举报人',
+        'reported_at' => '举报时间',
+        'target_post' => '帖子',
+        'target_comment' => '评论',
+        'content_gone' => '内容已被删除，无法查看',
+        'view_content' => '查看内容',
+        'note_placeholder' => '处理说明（可选，会写入审计）',
+        'resolve' => '确认违规并结案',
+        'dismiss' => '忽略该举报',
+        'handled_by' => '处理人 :name',
+    ],
+    'trash' => [
+        'title' => '回收站',
+        'subtitle_all' => '你可以查看并恢复所有成员删除的内容。',
+        'subtitle_own' => '这里只显示你自己删除的内容。',
+        'posts' => '已删除的帖子',
+        'comments' => '已删除的评论',
+        'empty_posts' => '没有已删除的帖子。',
+        'empty_comments' => '没有已删除的评论。',
+        'deleted_at' => '删除于 :time',
+        'restore' => '恢复',
+        'belongs_to' => '作者 :name',
+    ],
+    'post' => [
+        'toolbar' => '版主工具',
+        'feature' => '加精',
+        'unfeature' => '取消加精',
+        'lock' => '锁定回复',
+        'unlock' => '解锁回复',
+        'move' => '移动版块',
+        'move_submit' => '移动',
+        'locked_notice' => '该帖已被锁定，不再接收新回复。',
+        'moved_to' => '移动到：',
+    ],
+    'comment' => [
+        'actions' => '管理',
+        'hide' => '隐藏',
+        'unhide' => '取消隐藏',
+        'delete' => '删除',
+        'restore' => '恢复',
+    ],
+    'report' => [
+        'action' => '举报',
+        'title' => '举报内容',
+        'already' => '已举报',
+        'reason' => '原因',
+        'detail' => '补充说明（可选）',
+        'submit' => '提交举报',
+        'cancel' => '取消',
+    ],
+];

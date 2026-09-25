@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\ApiExceptionRenderer;
+use App\Exceptions\BusinessException;
 use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\UseSanctumGuard;
@@ -42,5 +43,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // API failures always use the { code, message, data } envelope.
         $exceptions->render(function (Throwable $e, Request $request) {
             return app(ApiExceptionRenderer::class)->render($e, $request);
+        });
+
+        // A business rule violation raised while serving a page is a user
+        // mistake ("this report was already handled"), not a server fault: send
+        // the browser back with the message instead of a 500 error page.
+        $exceptions->render(function (BusinessException $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                // Handled by the envelope renderer above.
+                return null;
+            }
+
+            return back()->with('error', $e->getMessage());
         });
     })->create();

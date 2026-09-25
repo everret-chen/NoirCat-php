@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'nav' => [
+        'moderation' => 'Moderation',
+        'trash' => 'Trash',
+    ],
+    'reports' => [
+        'title' => 'Report queue',
+        'subtitle' => ':count open',
+        'empty' => 'No open reports right now.',
+        'filter_status' => 'Status',
+        'filter_reason' => 'Reason',
+        'status_all' => 'All',
+        'reporter' => 'Reported by',
+        'reported_at' => 'Reported',
+        'target_post' => 'Post',
+        'target_comment' => 'Comment',
+        'content_gone' => 'The content was deleted and can no longer be viewed',
+        'view_content' => 'Open content',
+        'note_placeholder' => 'Resolution note (optional, written to the audit trail)',
+        'resolve' => 'Confirm and close',
+        'dismiss' => 'Dismiss',
+        'handled_by' => 'Handled by :name',
+    ],
+    'trash' => [
+        'title' => 'Trash',
+        'subtitle_all' => 'You can see and restore anything a member deleted.',
+        'subtitle_own' => 'Only the content you deleted yourself is listed here.',
+        'posts' => 'Deleted posts',
+        'comments' => 'Deleted comments',
+        'empty_posts' => 'No deleted posts.',
+        'empty_comments' => 'No deleted comments.',
+        'deleted_at' => 'Deleted :time',
+        'restore' => 'Restore',
+        'belongs_to' => 'Author :name',
+    ],
+    'post' => [
+        'toolbar' => 'Moderator tools',
+        'feature' => 'Feature',
+        'unfeature' => 'Unfeature',
+        'lock' => 'Lock replies',
+        'unlock' => 'Unlock replies',
+        'move' => 'Move to section',
+        'move_submit' => 'Move',
+        'locked_notice' => 'This thread is locked and no longer accepts replies.',
+        'moved_to' => 'Move to:',
+    ],
+    'comment' => [
+        'actions' => 'Manage',
+        'hide' => 'Hide',
+        'unhide' => 'Unhide',
+        'delete' => 'Delete',
+        'restore' => 'Restore',
+    ],
+    'report' => [
+        'action' => 'Report',
+        'title' => 'Report content',
+        'already' => 'Reported',
+        'reason' => 'Reason',
+        'detail' => 'Anything to add? (optional)',
+        'submit' => 'Submit report',
+        'cancel' => 'Cancel',
+    ],
+];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\ReportReason;
 use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Forum\StoreCommentRequest;
@@ -12,6 +13,7 @@ use App\Http\Requests\Forum\UpdatePostRequest;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Models\Report;
 use App\Models\User;
 use App\Services\CommentService;
 use App\Services\PostService;
@@ -64,7 +66,7 @@ class ForumController extends Controller
         $visible = $post->comments()
             ->where('status', Comment::STATUS_VISIBLE)
             ->with('author')
-            ->orderBy('created_at')
+            ->orderBy('created_at')->orderBy('id')
             ->get();
 
         /** @var Collection<int|string, Collection<int, Comment>> $byParent */
@@ -79,7 +81,40 @@ class ForumController extends Controller
             'maxDepth' => CommentService::MAX_DEPTH,
             'likedByMe' => $viewer !== null
                 && $post->likes()->where('user_id', $viewer->getAuthIdentifier())->exists(),
+            // Only rendered for moderators, but cheap enough to always pass.
+            'moveTargets' => $this->postCategories(),
+            'reportReasons' => ReportReason::cases(),
+            'myOpenReports' => $viewer === null ? [] : $this->openReportsOf($viewer, $post),
         ]);
+    }
+
+    /**
+     * Ids of the posts this viewer already reported on this page, so the button
+     * can say "宸蹭妇鎶? instead of failing with a conflict.
+     *
+     * @return array<string, list<int>>
+     */
+    private function openReportsOf(User $viewer, Post $post): array
+    {
+        $reports = Report::query()
+            ->where('reporter_id', $viewer->getAuthIdentifier())
+            ->where(function ($query) use ($post): void {
+                $query->where(fn ($inner) => $inner
+                    ->where('reportable_type', $post->getMorphClass())
+                    ->where('reportable_id', $post->getKey()))
+                    ->orWhere(fn ($inner) => $inner
+                        ->where('reportable_type', (new Comment())->getMorphClass())
+                        ->whereIn('reportable_id', $post->comments()->select('id')));
+            })
+            ->get(['reportable_type', 'reportable_id']);
+
+        $morph = $post->getMorphClass();
+        $commentMorph = (new Comment())->getMorphClass();
+
+        return [
+            'post' => $reports->where('reportable_type', $morph)->pluck('reportable_id')->all(),
+            'comments' => $reports->where('reportable_type', $commentMorph)->pluck('reportable_id')->all(),
+        ];
     }
 
     public function create(): View
@@ -173,20 +208,6 @@ class ForumController extends Controller
         $this->posts->unlike($user, $post);
 
         return back()->with('status', __('forum.messages.post_unliked'));
-    }
-
-    public function pin(Request $request, Post $post): RedirectResponse
-    {
-        $this->authorize('pin', $post);
-
-        $moderator = $request->user();
-        \assert($moderator instanceof User);
-
-        $this->posts->setPinned($moderator, $post, ! $post->is_pinned);
-
-        return back()->with('status', __(
-            $post->is_pinned ? 'forum.messages.post_pinned' : 'forum.messages.post_unpinned'
-        ));
     }
 
     /**
