@@ -116,7 +116,8 @@ class ModerationService
                 ! $viewer->can(Permission::COMMENT_DELETE_ANY->value),
                 fn ($query) => $query->where('author_id', $viewer->getAuthIdentifier()),
             )
-            ->with(['author:id,username,avatar', 'post:id,title,slug'])
+            // posts has no slug column: only the title is needed to label the row.
+            ->with(['author:id,username,avatar', 'post:id,title'])
             ->orderByDesc('deleted_at')
             ->paginate($perPage, ['*'], 'comments_page');
     }
