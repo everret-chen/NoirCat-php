@@ -20,6 +20,10 @@ jobs:
   report:
     name: MySQL 8 verification
     runs-on: ubuntu-latest
+    # The run commits its report back to the branch it tested, so it is limited
+    # to the dedicated branch: dev and main already run the MySQL job in ci.yml,
+    # and a self-committing workflow there would race the next push.
+    if: github.ref_name == 'ci/mysql-report'
 
     services:
       mysql:
