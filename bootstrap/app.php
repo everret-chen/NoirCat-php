@@ -40,6 +40,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // A business rule violation is a client mistake answered with a 4xx
+        // envelope (409 for a stale action, 422 for a rule): reporting it as an
+        // error would write a stack trace every time somebody double clicks,
+        // and would let any member flood the log at will. The security relevant
+        // failures keep their own explicit audit entries.
+        $exceptions->dontReport(BusinessException::class);
+
         // API failures always use the { code, message, data } envelope.
         $exceptions->render(function (Throwable $e, Request $request) {
             return app(ApiExceptionRenderer::class)->render($e, $request);

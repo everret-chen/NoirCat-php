@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\CommentService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -396,6 +397,27 @@ class ModerationPagesTest extends TestCase
             ->assertForbidden();
 
         $this->assertNotNull($post->refresh()->deleted_at);
+    }
+
+    #[Test]
+    public function a_business_conflict_is_answered_without_polluting_the_error_log(): void
+    {
+        $post = Post::factory()->create();
+        $reporter = $this->member();
+
+        $this->actingAs($reporter)->post(route('forum.report', $post), ['reason' => 'spam']);
+
+        // The second report is a client mistake answered with a redirect, so it
+        // must not reach the error log with a stack trace: any member could
+        // otherwise flood the log at will.
+        Log::spy();
+
+        $this->actingAs($reporter)
+            ->post(route('forum.report', $post), ['reason' => 'abuse'])
+            ->assertRedirect()
+            ->assertSessionHas('error', __('forum.errors.report_duplicate'));
+
+        Log::shouldNotHaveReceived('error');
     }
 
     #[Test]

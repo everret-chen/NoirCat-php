@@ -132,14 +132,26 @@ search "100%"   -> 1 hit(s)     search "a_b" -> 1 hit(s)     search "C:\path" ->
 | 3 | 列表页与详情页看不到加精/锁定状态 | 版主处置后没有任何视觉反馈 | 新增 `badge-featured` / `badge-locked` 徽章与锁定提示条 |
 | 4 | 测试用中文硬编码断言 UI 文案 | 测试客户端会带 `Accept-Language`，页面按 en 渲染而断言按 zh 取值 → 假失败 | 断言改为 `__()` 取词 + 类内固定 `X-Locale: zh_CN`，并在测试里写明原因 |
 | 5 | 置顶逻辑散在 `PostService`，新的治理动作无处安放 | 版主操作会分散到多个服务 | 新增 `ModerationService`（置顶/加精/锁定/移版/恢复/回收站），`PostService` 只保留作者向操作 |
+| 6 | 业务规则冲突（重复举报、结案过期、举报自己）按 `local.ERROR` + 堆栈写进日志 | 任何成员都能靠重复点击刷爆日志（掩盖真实告警、吃掉磁盘） | `dontReport(BusinessException::class)`：这类异常已渲染为 4xx，不再进错误日志；安全相关失败仍由各服务写显式审计。测试用 `Log::spy()` 断言"日志没有 error"，并已双向验证（去掉该行测试转红） |
 
 ### 治理功能的验证
 
 ```text
 php artisan test
-  Tests:    173 passed (696 assertions)     # 治理相关：ModerationTest 10 例、ReportTest 12 例、ModerationPagesTest 20 例
+  Tests:    174 passed (699 assertions)     # 治理相关：ModerationTest 10 例、ReportTest 12 例、ModerationPagesTest 21 例
 vendor/bin/phpstan analyse (level 6)
   [OK] No errors
+```
+
+真实 HTTP 冒烟（`.tmp/smoke-moderation.php`，双会话：版主 + 普通成员，**39 项断言全过**）：
+
+```text
+pages       治理台 200；普通成员访问治理台 403、访问自己的回收站 200
+moderator   发帖 → 加精（徽章出现）→ 锁定（提示条出现、评论框消失）→ 移版 → 置顶；三条审计齐全
+reporting   成员举报成功并入库 pending；页面转为"已举报"；重复举报只留一条；举报自己内容被拒
+queue       队列显示标题/原因/备注；结案后 status=resolved 且记录处理人；再次结案跳回提示而非 500
+trash       删除后详情 404 → 回收站可见 → 恢复 → 详情 200，并写入 forum.post.restored
+PASS 39  FAIL 0
 ```
 
 `vuln-lab` 对照漏洞：见 [forum-vuln-lab.md](forum-vuln-lab.md) 的 V22–V26（治理类）。
