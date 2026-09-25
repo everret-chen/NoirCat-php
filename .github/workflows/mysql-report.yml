@@ -101,6 +101,7 @@ jobs:
           cache: npm
 
       - name: "Quality commands (mirrors the ci.yml quality job)"
+        id: quality
         if: always()
         run: |
           set +e
@@ -113,6 +114,7 @@ jobs:
           exit 0
 
       - name: "Assets commands (mirrors the ci.yml assets job)"
+        id: assets
         if: always()
         run: |
           set +e
@@ -123,6 +125,7 @@ jobs:
           exit 0
 
       - name: "MySQL client probe (mirrors the ci.yml prove-the-schema step)"
+        id: dbcheck
         if: always()
         run: |
           set +e
@@ -153,13 +156,13 @@ jobs:
             echo "| tables in noircat_test | $(cat /tmp/tables.txt) |"
             echo "| migrate:fresh exit | ${{ steps.run.outputs.migrate_exit }} |"
             echo "| php artisan test (mysql) exit | ${{ steps.run.outputs.test_exit }} |"
-            echo "| quality: test exit | ${{ steps.run.outputs.quality_tests_exit }} |"
-            echo "| quality: phpstan exit | ${{ steps.run.outputs.phpstan_exit }} |"
-            echo "| quality: composer audit exit | ${{ steps.run.outputs.audit_exit }} |"
-            echo "| assets: npm ci exit | ${{ steps.run.outputs.npm_ci_exit }} |"
-            echo "| assets: npm run build exit | ${{ steps.run.outputs.npm_build_exit }} |"
-            echo "| mysql cli version exit | ${{ steps.run.outputs.mysql_cli_exit }} |"
-            echo "| mysql cli query exit | ${{ steps.run.outputs.mysql_query_exit }} |"
+            echo "| quality: test exit | ${{ steps.quality.outputs.quality_tests_exit }} |"
+            echo "| quality: phpstan exit | ${{ steps.quality.outputs.phpstan_exit }} |"
+            echo "| quality: composer audit exit | ${{ steps.quality.outputs.audit_exit }} |"
+            echo "| assets: npm ci exit | ${{ steps.assets.outputs.npm_ci_exit }} |"
+            echo "| assets: npm run build exit | ${{ steps.assets.outputs.npm_build_exit }} |"
+            echo "| mysql cli version exit | ${{ steps.dbcheck.outputs.mysql_cli_exit }} |"
+            echo "| mysql cli query exit | ${{ steps.dbcheck.outputs.mysql_query_exit }} |"
             echo
             echo "## migrate:fresh --seed --force"
             echo
