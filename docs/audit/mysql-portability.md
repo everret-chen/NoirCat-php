@@ -97,7 +97,22 @@ WARNINGS: (none)
 只是多返回一个常量列。MySQL 则严格报 1054。**这类预加载列名写错的问题在 SQLite 上永远看不见**，
 只有对真实引擎跑一遍才能发现 —— 这也是这次把 CI 任务建起来的直接原因。
 
-修复后再次触发该工作流，结论记录在 `docs/ci/mysql-8-report.md`（分支 `ci/mysql-report`）。
+修复后再次触发该工作流，结论：
+
+```text
+| server version        | 8.0.46 |
+| tables in noircat_test| 21     |
+| migrate:fresh exit    | 0      |
+| php artisan test exit | 0      |
+Tests:    179 passed (710 assertions)
+```
+
+即 **Phase 3 前置的 MySQL 8 接线验证已完成**：14 个迁移在真实 MySQL 8.0.46 上全部成功（含 `mediumtext` 改动、
+reports 表、多态索引、外键），全量 179 个用例 / 710 断言在 MySQL 上通过。
+报告文件：`docs/ci/mysql-8-report.md`（分支 `ci/mysql-report`，每次触发覆盖更新）。
+
+> 本机仍没有 MySQL 服务，所以"在你自己机器上再跑一遍"依然值得（见第 5 节）；
+> 但结论已由真实 MySQL 8 服务器给出，不再是"理论上应该能跑"。
 
 ## 5. 本机完成真实验证还差两步（需要你操作）
 

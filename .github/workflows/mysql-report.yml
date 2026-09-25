@@ -20,6 +20,10 @@ jobs:
   report:
     name: MySQL 8 verification
     runs-on: ubuntu-latest
+    # The run commits its report back to the branch it tested, so it is limited
+    # to the dedicated branch: dev and main already run the MySQL job in ci.yml,
+    # and a self-committing workflow there would race the next push.
+    if: github.ref_name == 'ci/mysql-report'
 
     services:
       mysql:
@@ -87,6 +91,49 @@ jobs:
                   echo $p->query("select count(*) from information_schema.tables where table_schema = \"noircat_test\"")->fetchColumn();' > /tmp/tables.txt 2>&1
           exit 0
 
+      # The same three command groups ci.yml runs, so a red CI run can be
+      # diagnosed from the committed transcript instead of the Actions UI.
+      - name: Setup Node
+        if: always()
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: "Quality commands (mirrors the ci.yml quality job)"
+        if: always()
+        run: |
+          set +e
+          php artisan test > /tmp/quality-tests.txt 2>&1
+          echo "quality_tests_exit=$?" >> "$GITHUB_OUTPUT"
+          vendor/bin/phpstan analyse --no-progress > /tmp/quality-phpstan.txt 2>&1
+          echo "phpstan_exit=$?" >> "$GITHUB_OUTPUT"
+          composer audit > /tmp/quality-audit.txt 2>&1
+          echo "audit_exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: "Assets commands (mirrors the ci.yml assets job)"
+        if: always()
+        run: |
+          set +e
+          npm ci --no-audit --no-fund > /tmp/assets-ci.txt 2>&1
+          echo "npm_ci_exit=$?" >> "$GITHUB_OUTPUT"
+          npm run build > /tmp/assets-build.txt 2>&1
+          echo "npm_build_exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: "MySQL client probe (mirrors the ci.yml prove-the-schema step)"
+        if: always()
+        run: |
+          set +e
+          mysql --version > /tmp/mysql-cli.txt 2>&1
+          echo "mysql_cli_exit=$?" >> "$GITHUB_OUTPUT"
+          mysql -h 127.0.0.1 -uroot -proot -N -e \
+            "select count(*) from information_schema.tables where table_schema='noircat_test'" \
+            >> /tmp/mysql-cli.txt 2>&1
+          echo "mysql_query_exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
       - name: Write the report
         if: always()
         run: |
@@ -105,7 +152,14 @@ jobs:
             echo "| server version | $(cat /tmp/server.txt) |"
             echo "| tables in noircat_test | $(cat /tmp/tables.txt) |"
             echo "| migrate:fresh exit | ${{ steps.run.outputs.migrate_exit }} |"
-            echo "| php artisan test exit | ${{ steps.run.outputs.test_exit }} |"
+            echo "| php artisan test (mysql) exit | ${{ steps.run.outputs.test_exit }} |"
+            echo "| quality: test exit | ${{ steps.run.outputs.quality_tests_exit }} |"
+            echo "| quality: phpstan exit | ${{ steps.run.outputs.phpstan_exit }} |"
+            echo "| quality: composer audit exit | ${{ steps.run.outputs.audit_exit }} |"
+            echo "| assets: npm ci exit | ${{ steps.run.outputs.npm_ci_exit }} |"
+            echo "| assets: npm run build exit | ${{ steps.run.outputs.npm_build_exit }} |"
+            echo "| mysql cli version exit | ${{ steps.run.outputs.mysql_cli_exit }} |"
+            echo "| mysql cli query exit | ${{ steps.run.outputs.mysql_query_exit }} |"
             echo
             echo "## migrate:fresh --seed --force"
             echo
@@ -113,28 +167,47 @@ jobs:
             tail -n 40 /tmp/migrate.txt
             echo '```'
             echo
-            echo "## failure list"
+            echo "## php artisan test (against MySQL)"
             echo
             echo '```text'
-            grep -E 'FAILED|Tests:' /tmp/tests.txt | head -n 80
+            grep -E 'FAILED|Tests:' /tmp/tests.txt | head -n 40
+            tail -n 25 /tmp/tests.txt
             echo '```'
             echo
-            echo "## failure detail"
+            echo "## php artisan test (sqlite, as the quality job runs it)"
             echo
             echo '```text'
-            grep -A 22 'FAILED' /tmp/tests.txt | head -n 70
+            grep -E 'FAILED|Tests:' /tmp/quality-tests.txt | head -n 40
             echo '```'
             echo
-            echo "## first failure in full"
+            echo "## phpstan"
             echo
             echo '```text'
-            head -n 40 /tmp/tests.txt
+            tail -n 20 /tmp/quality-phpstan.txt
             echo '```'
             echo
-            echo "## tail of the run"
+            echo "## composer audit"
             echo
             echo '```text'
-            tail -n 40 /tmp/tests.txt
+            tail -n 20 /tmp/quality-audit.txt
+            echo '```'
+            echo
+            echo "## npm ci"
+            echo
+            echo '```text'
+            tail -n 25 /tmp/assets-ci.txt
+            echo '```'
+            echo
+            echo "## npm run build"
+            echo
+            echo '```text'
+            tail -n 25 /tmp/assets-build.txt
+            echo '```'
+            echo
+            echo "## mysql client probe"
+            echo
+            echo '```text'
+            tail -n 10 /tmp/mysql-cli.txt
             echo '```'
           } > docs/ci/mysql-8-report.md
           cat docs/ci/mysql-8-report.md
