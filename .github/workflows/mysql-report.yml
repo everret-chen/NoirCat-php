@@ -119,10 +119,16 @@ jobs:
             grep -E 'FAILED|Tests:' /tmp/tests.txt | head -n 80
             echo '```'
             echo
+            echo "## failure detail"
+            echo
+            echo '```text'
+            grep -A 22 'FAILED' /tmp/tests.txt | head -n 70
+            echo '```'
+            echo
             echo "## first failure in full"
             echo
             echo '```text'
-            head -n 70 /tmp/tests.txt
+            head -n 40 /tmp/tests.txt
             echo '```'
             echo
             echo "## tail of the run"
