@@ -1,11 +1,12 @@
 # MySQL 8 verification trigger
 
 Touching this file (one line change) makes the `MySQL 8 report` workflow run:
-it migrates and tests the suite against a real MySQL 8 server and commits the
-transcript to `docs/ci/mysql-8-report.md` on this branch.
+it migrates and tests the suite against a real MySQL 8 server, mirrors the
+quality and assets command groups from ci.yml, and commits the transcripts to
+`docs/ci/mysql-8-report.md` on this branch.
 
 The report is committed rather than only stored in the Actions UI so that the
 result can be read with `git fetch` from an environment where the GitHub API is
 not reachable.
 
-Last triggered: 2026-09-25 (round 1)
+Last triggered: 2026-09-25 (round 5 - diagnose the red CI run)
