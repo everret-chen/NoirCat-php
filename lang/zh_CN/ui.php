@@ -38,6 +38,8 @@ return [
     ],
     'status' => [
         'pinned' => '置顶',
+        'featured' => '精华',
+        'locked' => '已锁定',
         'draft' => '草稿',
     ],
     'pagination' => [

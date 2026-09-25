@@ -130,9 +130,33 @@
 - [x] 新增测试：`NoircatCommandsTest`（6 例）、`VerifiedGateTest`（4 例，含"生产忽略开关"）、`MailLogReaderTest`（6 例）
 - [x] README 补"收不到验证邮件怎么办"三步排查与 Mailpit 接法
 
+### Phase 2.5：治理闭环（本轮）
+- [x] 数据层：`posts` 新增 `is_featured` / `is_locked`；新建 `reports` 表（多态目标 + 唯一索引防重复举报 + 处置字段）
+- [x] 权限点：`post:feature` / `post:lock` / `post:move` / `report:create`（共 22 个），版主矩阵同步更新
+- [x] 服务层：`ModerationService`（置顶/加精/锁定/移版/恢复软删除/回收站列表）、`ReportService`（举报创建、队列、结案与忽略）
+- [x] 授权：`PostPolicy` 增加 feature/lock/move/restore，`PostPolicy::comment` 增加锁定判断；新增 `ReportPolicy`；`CommentPolicy` 增加 unhide/restore/report
+- [x] 评论生命周期：`CommentService::unhide/restore` 同步维护 `comment_count`；锁定帖在服务层也拒绝新评论
+- [x] API：`/api/posts/{id}/{feature,lock,category,restore}`、`/api/comments/{id}/{unhide,restore}`、`/api/moderation/trash`、`/api/reports`（创建 / 队列 / resolve / dismiss）
+- [x] Web：帖子版主工具条、评论行内隐藏/取消隐藏/删除/恢复、举报弹层（含"已举报"状态）、治理台（队列 + 状态/原因筛选 + 结案/忽略）、回收站（帖子/评论分列 + 恢复）、导航入口（带待处理计数）
+- [x] 修复：Web 页面上的业务规则冲突原本返回 500，现改为跳回并提示（API 仍用信封）
+- [x] i18n：`lang/{zh_CN,en}/moderation_ui.php` + `forum.php` 的举报原因/状态/错误文案 + `ui.status.featured|locked`
+- [x] 测试：`ModerationTest`（10 例）、`ReportTest`（12 例）、`ModerationPagesTest`（20 例）；全量 **173 用例 / 696 断言通过**，PHPStan level 6 **0 错误**
+- [x] 审计文档：`forum-audit.md` 第 6–7 节（治理清单 + 5 个修复）
+- [x] `vuln-lab` 治理类对照漏洞 V22–V26（见 `forum-vuln-lab.md`）
+
+### Phase 3 前置：MySQL 8 接线
+- [x] 可移植性审计（只读取证，逐文件）：见 `docs/audit/mysql-portability.md`
+- [x] 修复：长正文列 `TEXT` → `MEDIUMTEXT`（原校验 5 万字符在 MySQL 会触发 1406）
+- [x] 修复：路由 id 参数统一 `[0-9]+`（否则 MySQL 会把 `12abc` 强转成 12 并返回别的资源）
+- [x] 修复：所有排序补 `id` 兜底（并列行顺序在两引擎不同 → 分页重复或漏行）
+- [x] 配置：`DB_ENGINE=InnoDB`、`DB_TIMEZONE=+08:00`、默认排序规则改 `utf8mb4_0900_ai_ci`，`.env.example` 写明原因
+- [x] CI：新增 `Tests against MySQL 8` 任务（MySQL 8 service + `migrate:fresh --seed` + 全量测试 + 表数量断言）
+- [ ] **本机真实验证**（需你操作）：启用 `E:\php83\php.ini` 的 `pdo_mysql`；准备 MySQL 8（本机无 CLI / 无 Docker / 3306 未监听）；然后 `migrate:fresh --seed` + `php artisan test`
+
 ### 待办
 - [ ] 搜索切换到 Meilisearch + Scout（当前为参数绑定的 LIKE，通配符已按字面转义）
-- [ ] 富文本/图片上传与内容治理、通知（被回复/被点赞）
+- [ ] @提及与站内通知（M6：被回复 / 被@ / 举报处置结果）
+- [ ] 评论点赞（`comments.like_count` 字段已建，尚无接口）
 - [ ] 邮箱硬化（已取证，未修）：
       - 改邮箱后 `email_verified_at` 不失效 → 验证一次后换任意邮箱仍算已验证（`AuthService::updateProfile`）
       - 邮箱未规范化：`A@x.com` 与 `a@x.com` 可注册成两个账号，且用邮箱登录时大小写敏感

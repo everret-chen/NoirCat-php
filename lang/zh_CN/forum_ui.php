@@ -8,6 +8,7 @@ return [
     'new_post' => '发帖',
     'search_placeholder' => '搜索帖子…',
     'filter_category' => '版块',
+    'no_category' => '不指定版块',
     'empty' => '还没有帖子，来做第一个吧。',
     'post_title' => '标题',
     'post_content' => '正文',
