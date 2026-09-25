@@ -44,7 +44,38 @@
 | R7 | `TIMESTAMP` 2038 上限 | 当前没有任何业务需要 2038 之后的时间；真需要时把那几列改成 `dateTime()` |
 | R10 | MySQL `JSON` 列会校验写入并规范化键序 | 只影响 `audit_logs.payload`；已有 `array` cast，且项目不做 payload 字符串比较 |
 
-## 4. 本机完成真实验证还差两步（需要你操作）
+## 4. 本机能做的验证：离线编译 MySQL DDL
+
+本机没有 MySQL 服务，但**引擎语法可以离线验证**：把连接的 schema grammar 换成 MySQL 的，
+再用 `Connection::pretend()` 跑一遍所有迁移 —— 语句会被编译并记录，但不会真的执行。
+这样在没有服务器的情况下也能抓出 MySQL 不合法的 DDL（TEXT/BLOB/JSON 默认值、超长索引、不支持的修饰符）。
+
+脚本：`.tmp/probe-mysql-ddl.php`，实测结果：
+
+```text
+migrations to compile: 14
+  OK    0001_01_01_000000_create_users_table.php                6 statement(s)
+  ...
+  OK    2026_09_21_100100_create_reports_table.php              6 statement(s)
+  OK    2026_09_21_100200_widen_post_body_columns.php           2 statement(s)
+        -> alter table `posts` modify `content` mediumtext not null
+        -> alter table `posts` modify `content_html` mediumtext null
+
+statements compiled: 73
+migrations that failed to compile: 0
+WARNINGS: (none)
+```
+
+**证明了**：14 个迁移（含 spatie 权限表、软删除、morphs、唯一索引）在 MySQL 语法下全部编译通过，
+`posts` 的列宽修复确实生成了 `mediumtext`，且没有任何 TEXT/BLOB/JSON 列带默认值（MySQL 会直接拒绝这类 DDL）。
+
+**不能证明**：真实连接下的行为 —— 排序规则比较、时区、字符串强转、长度边界都必须在真机上跑。
+那部分由 CI 的 `Tests against MySQL 8` 任务覆盖。
+
+## 5. 本机完成真实验证还差两步（需要你操作）
+
+> 现状（已核实）：`php -m` 无 `pdo_mysql`、`mysql` CLI 不存在、`docker` 不存在、3306 未监听。
+> 因此第 4 节的离线 DDL 编译是本机能给出的最强证据，真机行为只能靠 CI 任务或你补上下面两步。
 
 1. **启用 PHP 的 MySQL 驱动**（文件在工作区之外，我不能改）：
 
@@ -71,7 +102,7 @@
 
    在没有 MySQL 之前，CI 的 `Tests against MySQL 8` 任务就是唯一的真实验证途径。
 
-## 5. 复盘
+## 6. 复盘
 
 1. **开发数据库和部署数据库不同，等于没有验证过 schema**：SQLite 对列长、类型、排序规则都很宽容，这类问题只会在生产第一次写长文本时爆出来。
 2. **"能跑" 不等于 "语义相同"**：强转、排序规则、时区这些差异不会报错，只会悄悄改变结果；把它们写进 CI 才有意义。
