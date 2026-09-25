@@ -1,4 +1,4 @@
-# MySQL 8 verification trigger
+﻿# MySQL 8 verification trigger
 
 Touching this file (one line change) makes the `MySQL 8 report` workflow run:
 it migrates and tests the suite against a real MySQL 8 server and commits the
@@ -8,4 +8,4 @@ The report is committed rather than only stored in the Actions UI so that the
 result can be read with `git fetch` from an environment where the GitHub API is
 not reachable.
 
-Last triggered: 2026-09-25 (round 3 — capture the failing assertion)
+Last triggered: 2026-09-25 (round 4 — verify the slug fix)
