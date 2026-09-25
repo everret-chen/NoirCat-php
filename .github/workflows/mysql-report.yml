@@ -113,10 +113,22 @@ jobs:
             tail -n 40 /tmp/migrate.txt
             echo '```'
             echo
-            echo "## php artisan test"
+            echo "## failure list"
             echo
             echo '```text'
-            tail -n 80 /tmp/tests.txt
+            grep -E 'FAILED|Tests:' /tmp/tests.txt | head -n 80
+            echo '```'
+            echo
+            echo "## first failure in full"
+            echo
+            echo '```text'
+            head -n 70 /tmp/tests.txt
+            echo '```'
+            echo
+            echo "## tail of the run"
+            echo
+            echo '```text'
+            tail -n 40 /tmp/tests.txt
             echo '```'
           } > docs/ci/mysql-8-report.md
           cat docs/ci/mysql-8-report.md
