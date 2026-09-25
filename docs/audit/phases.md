@@ -139,10 +139,15 @@
 - [x] API：`/api/posts/{id}/{feature,lock,category,restore}`、`/api/comments/{id}/{unhide,restore}`、`/api/moderation/trash`、`/api/reports`（创建 / 队列 / resolve / dismiss）
 - [x] Web：帖子版主工具条、评论行内隐藏/取消隐藏/删除/恢复、举报弹层（含"已举报"状态）、治理台（队列 + 状态/原因筛选 + 结案/忽略）、回收站（帖子/评论分列 + 恢复）、导航入口（带待处理计数）
 - [x] 修复：Web 页面上的业务规则冲突原本返回 500，现改为跳回并提示（API 仍用信封）
+- [x] 修复：业务规则冲突（重复举报 / 结案过期 / 举报自己）原本按 ERROR + 堆栈写进日志 —— 任何成员都能凭此刷日志；
+      现 `dontReport(BusinessException::class)`（安全相关失败仍由各自的服务写审计），并有测试用 `Log::spy()` 双向验证过
 - [x] i18n：`lang/{zh_CN,en}/moderation_ui.php` + `forum.php` 的举报原因/状态/错误文案 + `ui.status.featured|locked`
-- [x] 测试：`ModerationTest`（10 例）、`ReportTest`（12 例）、`ModerationPagesTest`（20 例）；全量 **173 用例 / 696 断言通过**，PHPStan level 6 **0 错误**
-- [x] 审计文档：`forum-audit.md` 第 6–7 节（治理清单 + 5 个修复）
-- [x] `vuln-lab` 治理类对照漏洞 V22–V26（见 `forum-vuln-lab.md`）
+- [x] 测试：`ModerationTest`（10 例）、`ReportTest`（12 例）、`ModerationPagesTest`（21 例）；全量 **174 用例 / 699 断言通过**，PHPStan level 6 **0 错误**
+- [x] 真实 HTTP 端到端冒烟（`.tmp/smoke-moderation.php`，双会话：版主 + 普通成员）**39 项断言全过**：
+      治理页权限、加精/锁定/移版/置顶生效与审计、锁帖拒绝回帖、举报（含重复与自举报被拒）、队列结案与"重复结案不 500"、软删除→回收站→恢复
+- [x] 审计文档：`forum-audit.md` 第 6–7 节（治理清单 + 6 个修复）
+- [x] `vuln-lab` 治理类对照漏洞 V22–V26（见 `forum-vuln-lab.md`）：分支重建为 `main + 三个漏洞提交`，
+      全量 **63 failed / 110 passed**，其中 V1–V21 造 49 例、V22–V26 新增 14 例
 
 ### Phase 3 前置：MySQL 8 接线
 - [x] 可移植性审计（只读取证，逐文件）：见 `docs/audit/mysql-portability.md`
