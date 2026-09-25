@@ -33,6 +33,7 @@
 | 5 | mysql 连接无 `timezone` | `TIMESTAMP` 列按会话时区↔UTC 转换，`CURRENT_TIMESTAMP` 默认值也按会话时区打戳 → 同表混两种时钟 | `DB_TIMEZONE`，默认 `+08:00`，与 `APP_TIMEZONE` 对齐 |
 | 6 | 默认 `utf8mb4_unicode_ci` | 大小写/尾随空格/emoji 在内的比较语义比 SQLite 宽松，会出现"MySQL 能登录、SQLite 不能"这类分叉 | 默认改为 MySQL 8 的 `utf8mb4_0900_ai_ci`；`.env.example` 里写明原因 |
 | 7 | 测试只跑 SQLite | 上面这些问题在 CI 里永远不会失败 | CI 新增 `Tests against MySQL 8` 任务：MySQL 8 service + `migrate:fresh --seed` + 全量测试 + "表确实建在 MySQL 里"的断言 |
+| 8 | **`ModerationService::trashComments` 的预加载写了 `post:id,title,slug`，而 `posts` 表根本没有 `slug` 列** | 回收站页（有已删除评论时）在 MySQL 上 500：`SQLSTATE[42S22] Column not found: 1054 Unknown column 'slug'`；SQLite 上却一直"正常" | 改成 `post:id,title`（视图只用标题）。**这个只有真机 CI 抓到了**，见第 4.1 节 |
 
 ## 3. 明确保留的行为差异（未改代码，已记录）
 
@@ -45,7 +46,6 @@
 | R10 | MySQL `JSON` 列会校验写入并规范化键序 | 只影响 `audit_logs.payload`；已有 `array` cast，且项目不做 payload 字符串比较 |
 
 ## 4. 本机能做的验证：离线编译 MySQL DDL
-
 本机没有 MySQL 服务，但**引擎语法可以离线验证**：把连接的 schema grammar 换成 MySQL 的，
 再用 `Connection::pretend()` 跑一遍所有迁移 —— 语句会被编译并记录，但不会真的执行。
 这样在没有服务器的情况下也能抓出 MySQL 不合法的 DDL（TEXT/BLOB/JSON 默认值、超长索引、不支持的修饰符）。
@@ -70,7 +70,49 @@ WARNINGS: (none)
 `posts` 的列宽修复确实生成了 `mediumtext`，且没有任何 TEXT/BLOB/JSON 列带默认值（MySQL 会直接拒绝这类 DDL）。
 
 **不能证明**：真实连接下的行为 —— 排序规则比较、时区、字符串强转、长度边界都必须在真机上跑。
-那部分由 CI 的 `Tests against MySQL 8` 任务覆盖。
+那部分由 CI 任务覆盖（见 4.1）。
+
+## 4.1 真实 MySQL 8 的验证结果（CI 回传报告）
+
+本机装不了 MySQL（无 CLI、无 Docker、3306 未监听），所以把验证搬到 CI，并**让 CI 把结果提交回分支**，
+这样在 GitHub API 不可达的环境里也能用 `git fetch` 读到结论：
+
+- `.github/workflows/mysql-report.yml`：改动 `.github/mysql-report-trigger` 即触发；
+  起一个 MySQL 8 service，跑 `migrate:fresh --seed --force` 与 `php artisan test`，
+  把输出写进 `docs/ci/mysql-8-report.md` 并提交回该分支。
+- 首次运行结果：
+
+```text
+| server version        | 8.0.46 |
+| tables in noircat_test| 21     |
+| migrate:fresh exit    | 0      |
+| php artisan test exit | 1      |
+```
+
+即：**14 个迁移在真实 MySQL 8.0.46 上全部成功**（含 `mediumtext` 改动、reports 表、外键），
+但测试有 1 例失败 —— 正是第 2 节 #8 的 `posts.slug`：`SQLSTATE[42S22] Column not found: 1054 Unknown column 'slug'`。
+
+**为什么 SQLite 一直没报错**：SQLite 保留了"双引号字符串字面量"的兼容行为 ——
+当 `"slug"` 不是列名时，它被当成字符串常量 `'slug'`，于是 `select "id","title","slug" from posts` 不报错，
+只是多返回一个常量列。MySQL 则严格报 1054。**这类预加载列名写错的问题在 SQLite 上永远看不见**，
+只有对真实引擎跑一遍才能发现 —— 这也是这次把 CI 任务建起来的直接原因。
+
+修复后再次触发该工作流，结论：
+
+```text
+| server version        | 8.0.46 |
+| tables in noircat_test| 21     |
+| migrate:fresh exit    | 0      |
+| php artisan test exit | 0      |
+Tests:    179 passed (710 assertions)
+```
+
+即 **Phase 3 前置的 MySQL 8 接线验证已完成**：14 个迁移在真实 MySQL 8.0.46 上全部成功（含 `mediumtext` 改动、
+reports 表、多态索引、外键），全量 179 个用例 / 710 断言在 MySQL 上通过。
+报告文件：`docs/ci/mysql-8-report.md`（分支 `ci/mysql-report`，每次触发覆盖更新）。
+
+> 本机仍没有 MySQL 服务，所以"在你自己机器上再跑一遍"依然值得（见第 5 节）；
+> 但结论已由真实 MySQL 8 服务器给出，不再是"理论上应该能跑"。
 
 ## 5. 本机完成真实验证还差两步（需要你操作）
 

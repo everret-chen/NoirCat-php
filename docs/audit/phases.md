@@ -156,7 +156,13 @@
 - [x] 修复：所有排序补 `id` 兜底（并列行顺序在两引擎不同 → 分页重复或漏行）
 - [x] 配置：`DB_ENGINE=InnoDB`、`DB_TIMEZONE=+08:00`、默认排序规则改 `utf8mb4_0900_ai_ci`，`.env.example` 写明原因
 - [x] CI：新增 `Tests against MySQL 8` 任务（MySQL 8 service + `migrate:fresh --seed` + 全量测试 + 表数量断言）
-- [ ] **本机真实验证**（需你操作）：启用 `E:\php83\php.ini` 的 `pdo_mysql`；准备 MySQL 8（本机无 CLI / 无 Docker / 3306 未监听）；然后 `migrate:fresh --seed` + `php artisan test`
+- [x] **真实 MySQL 8 验证完成**：再加 `.github/workflows/mysql-report.yml` —— 触发后起 MySQL 8 service、跑迁移与全量测试，
+      并把报告**提交回分支**（`docs/ci/mysql-8-report.md`），这样在 GitHub API 不可达的环境里也能用 `git fetch` 读到结论
+- [x] 该机制当场抓到真问题：`ModerationService::trashComments` 预加载 `post:id,title,slug`，而 `posts` 没有 `slug` 列 →
+      回收站页在 MySQL 上 500（`1054 Unknown column`）；SQLite 因"双引号字符串当字面量"的兼容行为始终没报错。已修
+- [x] 最终结论（MySQL 8.0.46）：`migrate:fresh --seed` 退出 0、21 张表、`php artisan test` **179 passed / 710 assertions、exit 0**
+- [x] `tests/Feature/RouteParameterTest.php`（5 例）：把"id 参数只允许数字"这条 MySQL 兼容约束用测试钉住
+- [ ] 本机自建 MySQL 再跑一遍（可选）：启用 `pdo_mysql`（或直接用 `php -d extension=pdo_mysql`）+ 自备 MySQL 8
 
 ### 待办
 - [ ] 搜索切换到 Meilisearch + Scout（当前为参数绑定的 LIKE，通配符已按字面转义）
