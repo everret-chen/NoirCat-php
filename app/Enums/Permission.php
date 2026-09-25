@@ -18,8 +18,15 @@ enum Permission: string
     case POST_DELETE_OWN = 'post:delete_own';
     case POST_DELETE_ANY = 'post:delete_any';
     case POST_PIN = 'post:pin';
+    case POST_FEATURE = 'post:feature';
+    case POST_LOCK = 'post:lock';
+    case POST_MOVE = 'post:move';
     case COMMENT_CREATE = 'comment:create';
     case COMMENT_DELETE_ANY = 'comment:delete_any';
+
+    // Reports (creating one is open to every member, handling needs moderation)
+    case REPORT_CREATE = 'report:create';
+    case REPORT_HANDLE = 'report:handle';
 
     // Books
     case BOOK_UPLOAD = 'book:upload';
@@ -36,7 +43,6 @@ enum Permission: string
     case GUILD_PLUGIN_INSTALL = 'guild:plugin:install';
 
     // Users, moderation and security
-    case REPORT_HANDLE = 'report:handle';
     case USER_MANAGE = 'user:manage';
     case AUDIT_VIEW = 'audit:view';
 

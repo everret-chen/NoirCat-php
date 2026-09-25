@@ -28,6 +28,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::POST_UPDATE_OWN,
             Permission::POST_DELETE_OWN,
             Permission::COMMENT_CREATE,
+            Permission::REPORT_CREATE,
             Permission::BOOK_UPLOAD,
             Permission::BOOK_DOWNLOAD,
             Permission::GUILD_CREATE,
@@ -38,9 +39,12 @@ class RolesAndPermissionsSeeder extends Seeder
         UserRole::MODERATOR->value => [
             Permission::POST_DELETE_ANY,
             Permission::POST_PIN,
+            Permission::POST_FEATURE,
+            Permission::POST_LOCK,
+            Permission::POST_MOVE,
             Permission::COMMENT_DELETE_ANY,
-            Permission::BOOK_DELETE_ANY,
             Permission::REPORT_HANDLE,
+            Permission::BOOK_DELETE_ANY,
         ],
         // admin receives every permission below.
         UserRole::ADMIN->value => [],

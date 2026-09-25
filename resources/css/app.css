@@ -93,6 +93,14 @@
         @apply badge bg-ink-700 text-ink-300;
     }
 
+    .badge-featured {
+        @apply badge bg-amber-500/15 text-amber-300;
+    }
+
+    .badge-locked {
+        @apply badge bg-red-950/40 text-red-300;
+    }
+
     .muted {
         @apply text-ink-400;
     }

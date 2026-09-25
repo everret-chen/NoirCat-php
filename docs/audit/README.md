@@ -7,6 +7,8 @@
 |---|---|---|---|---|
 | 认证与权限 | [auth-audit.md](auth-audit.md) | [auth-vuln-lab.md](auth-vuln-lab.md) | Phase 1 | ✅ 已完成 |
 | 论坛 | [forum-audit.md](forum-audit.md) | [forum-vuln-lab.md](forum-vuln-lab.md) | Phase 2 | ✅ 已完成 |
+| 论坛治理（举报 / 加精 / 锁定 / 回收站） | [forum-audit.md](forum-audit.md) 第 6–7 节 | [forum-vuln-lab.md](forum-vuln-lab.md)（V22–V26） | Phase 2.5 | ✅ 已完成 |
+| MySQL 8 可移植性 | [mysql-portability.md](mysql-portability.md) | — | Phase 3 前置 | ⚠️ 代码已修，本机待验证 |
 | 电子书 | — | — | Phase 3 | ⏳ 待开始 |
 | 学习成长 | — | — | Phase 4 | ⏳ 待开始 |
 | 公会与插件 | — | — | Phase 5 | ⏳ 待开始 |

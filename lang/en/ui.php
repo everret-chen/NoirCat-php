@@ -38,6 +38,8 @@ return [
     ],
     'status' => [
         'pinned' => 'Pinned',
+        'featured' => 'Featured',
+        'locked' => 'Locked',
         'draft' => 'Draft',
     ],
     'pagination' => [

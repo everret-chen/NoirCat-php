@@ -22,6 +22,19 @@
             <span class="muted">{{ __('ui.nav.books') }}</span>
             <span class="muted">{{ __('ui.nav.guild') }}</span>
             <span class="muted">{{ __('ui.nav.learn') }}</span>
+
+            @auth
+                @can('viewAny', \App\Models\Report::class)
+                    @php($openReports = \App\Models\Report::query()->open()->count())
+                    <a href="{{ route('moderation.reports') }}" class="flex items-center gap-1 text-ink-200 hover:text-frost-300">
+                        {{ __('moderation_ui.nav.moderation') }}
+                        @if ($openReports > 0)
+                            <span class="rounded bg-frost-600/20 px-1.5 text-xs text-frost-300">{{ $openReports }}</span>
+                        @endif
+                    </a>
+                    <a href="{{ route('moderation.trash') }}" class="text-ink-200 hover:text-frost-300">{{ __('moderation_ui.nav.trash') }}</a>
+                @endcan
+            @endauth
         </nav>
 
         <form action="{{ route('forum.index') }}" method="GET" class="ml-auto hidden sm:block">

@@ -110,22 +110,6 @@ class PostService
         );
     }
 
-    public function setPinned(User $actor, Post $post, bool $pinned): Post
-    {
-        $post->is_pinned = $pinned;
-        $post->save();
-
-        $this->auditLogs->record(
-            $pinned ? 'forum.post.pinned' : 'forum.post.unpinned',
-            ['title' => $post->title],
-            AuditLog::RESULT_SUCCESS,
-            $post,
-            $actor->id,
-        );
-
-        return $post;
-    }
-
     public function like(User $user, Post $post): Post
     {
         return DB::transaction(function () use ($user, $post): Post {
@@ -192,10 +176,13 @@ class PostService
             $this->applySearch($query, (string) $filters['q']);
         }
 
+        // id is the tiebreaker: created_at has one second of precision, and
+        // without a unique column MySQL and SQLite return different orders for
+        // ties, which makes rows repeat or vanish across pages.
         match ($filters['sort'] ?? 'latest') {
-            'popular' => $query->orderByDesc('like_count')->orderByDesc('created_at'),
-            'views' => $query->orderByDesc('view_count')->orderByDesc('created_at'),
-            'active' => $query->orderByRaw('COALESCE(last_commented_at, created_at) DESC'),
+            'popular' => $query->orderByDesc('like_count')->orderByDesc('created_at')->orderByDesc('id'),
+            'views' => $query->orderByDesc('view_count')->orderByDesc('created_at')->orderByDesc('id'),
+            'active' => $query->orderByRaw('COALESCE(last_commented_at, created_at) DESC')->orderByDesc('id'),
             default => $query->pinnedFirst(),
         };
 

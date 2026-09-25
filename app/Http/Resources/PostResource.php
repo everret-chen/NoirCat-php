@@ -39,6 +39,8 @@ class PostResource extends JsonResource
             'content_html' => $this->when($this->withBody, $this->content_html),
             'status' => $this->status,
             'is_pinned' => $this->is_pinned,
+            'is_featured' => $this->is_featured,
+            'is_locked' => $this->is_locked,
             'category' => $this->whenLoaded('category', fn () => new CategoryResource($this->category)),
             'author' => $this->whenLoaded('author', fn () => new AuthorResource($this->author)),
             'view_count' => $this->view_count,

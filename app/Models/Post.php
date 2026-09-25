@@ -49,6 +49,8 @@ class Post extends Model
     {
         return [
             'is_pinned' => 'boolean',
+            'is_featured' => 'boolean',
+            'is_locked' => 'boolean',
             'last_commented_at' => 'datetime',
         ];
     }
@@ -95,16 +97,26 @@ class Post extends Model
     }
 
     /**
+     * Highlighted threads rank above ordinary ones, below pinned ones.
+     *
      * @param  Builder<Post>  $query
      * @return Builder<Post>
      */
     public function scopePinnedFirst(Builder $query): Builder
     {
-        return $query->orderByDesc('is_pinned')->orderByDesc('created_at');
+        return $query->orderByDesc('is_pinned')
+            ->orderByDesc('is_featured')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
     }
 
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED;
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->is_locked;
     }
 }

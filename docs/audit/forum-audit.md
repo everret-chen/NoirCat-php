@@ -99,3 +99,47 @@ search "100%"   -> 1 hit(s)     search "a_b" -> 1 hit(s)     search "C:\path" ->
 2. **计数列是状态，不是日志**：任何改变可见性的操作（隐藏、删除）都必须同步计数，否则前端展示会长期错误。
 3. **跨数据库的 SQL 小语义必须实测**：`LIKE` 的默认转义字符 MySQL 有、SQLite 没有，只靠"看起来对"的转义代码会静默失配。
 4. **文档声称的缓解措施必须有路由/测试兜底**：`verified` 中间件写好了却没接线，审计表会给出错误的安全感。此后每条"✅"都要能指向测试或路由。
+
+## 6. 治理闭环（Phase 2.5 追加）
+
+举报与版主处置是论坛的第二条主线：**成员报告问题，版主决定处置**，两者在数据与审计上完全分离。
+
+| 检查项 | 结论 | 落点 |
+|---|---|---|
+| 举报能否刷屏 | ✅ `reports` 唯一索引 `(reporter_id, reportable_type, reportable_id)` + 服务层 409；同一人对同一对象只能举报一次 | `ReportService::create` / 迁移 |
+| 举报对象是否受限 | ✅ 只接受 `Post` / `Comment`（白名单），未知类型 422；举报已删除内容 404 | `ReportService::REPORTABLE` |
+| 能否举报自己的内容 | ✅ 422/4001，减少噪音与"自我表演式举报" | `ReportService::create` |
+| 举报正文注入 | ✅ 只存纯文本 `detail`（≤1000），前端转义输出 | `StoreReportRequest` |
+| 举报人是否可信 | ✅ `reporter_id` 永远取自会话，请求体不接受 | `Report::create` + 控制器 |
+| 处置权限 | ✅ `ReportPolicy`：`report:create` 人人有，`report:handle` 只有版主/管理员；普通成员 403 | `ReportPolicy` |
+| 重复处置 | ✅ 已关闭的举报再处置返回 409，不会覆盖"谁决定了什么" | `ReportService::close` |
+| 处置留痕 | ✅ `handled_by`/`handled_at`/`resolution_note` + `audit_logs` 的 `moderation.report.resolved|dismissed` | `ReportService::close` |
+| 内容被删除后的举报 | ✅ 队列里保留为"内容已不存在"（`content_available=false`），版主仍可结案，不产生无法关闭的孤儿条目 | `ReportResource` / 治理台视图 |
+| 加精 / 锁定 / 移版 越权 | ✅ 三个独立权限点 `post:feature` / `post:lock` / `post:move`，普通成员 403；每次操作写审计 | `PostPolicy` / `ModerationService` |
+| 锁定帖还能不能回帖 | ✅ 策略 + 服务双保险（`PostPolicy::comment` 与 `CommentService::create` 都检查），前端隐藏评论框并提示 | 同上 |
+| 回收站越权 | ✅ 版主见全部、成员只见自己的（过滤在服务层按权限施加，不信任请求参数）；恢复按"删除权"判定 | `ModerationService::trashPosts/trashComments` / `PostPolicy::restore` |
+| 恢复软删除内容 | ✅ `onlyTrashed()` 查回 + 恢复写审计；恢复评论会同步把 `comment_count` 加回 | `ModerationService::restorePost` / `CommentService::restore` |
+| 评论隐藏/取消隐藏 | ✅ 隐藏减计数、取消隐藏加计数，重复操作返回 409 而不是静默成功 | `CommentService::hide/unhide` |
+| 治理页面上的业务异常 | ⚠️ **本轮发现并修复**：Web 页面上的"业务规则冲突"原本会渲染成 500 | 见第 7 节 #1 |
+| 治理页面越权访问 | ✅ `/moderation/reports` 403；导航入口只对 `report:handle` 显示（含待处理计数） | `ModerationController` / 布局 |
+
+## 7. 治理环节发现并修复的问题
+
+| # | 问题 | 风险 | 处理 |
+|---|---|---|---|
+| 1 | 业务规则冲突（例如"该举报已被处理"）在 Web 页面上抛 `BusinessException`，而异常渲染器只处理 API → 框架按未知异常处理，**返回 500 错误页** | 管理员重复点击看到的是"服务器错误"，且 500 会污染日志与监控 | `bootstrap/app.php` 增加 Web 分支：`back()->with('error', message)`；API 仍走信封。测试断言 302 + 会话错误消息 |
+| 2 | 报表页把"隐藏/删除评论"的能力只放在 API | 版主在页面上无法治理评论，"管理员账号"形同虚设 | 评论行内加隐藏/取消隐藏/删除/恢复表单，全部走策略授权 |
+| 3 | 列表页与详情页看不到加精/锁定状态 | 版主处置后没有任何视觉反馈 | 新增 `badge-featured` / `badge-locked` 徽章与锁定提示条 |
+| 4 | 测试用中文硬编码断言 UI 文案 | 测试客户端会带 `Accept-Language`，页面按 en 渲染而断言按 zh 取值 → 假失败 | 断言改为 `__()` 取词 + 类内固定 `X-Locale: zh_CN`，并在测试里写明原因 |
+| 5 | 置顶逻辑散在 `PostService`，新的治理动作无处安放 | 版主操作会分散到多个服务 | 新增 `ModerationService`（置顶/加精/锁定/移版/恢复/回收站），`PostService` 只保留作者向操作 |
+
+### 治理功能的验证
+
+```text
+php artisan test
+  Tests:    173 passed (696 assertions)     # 治理相关：ModerationTest 10 例、ReportTest 12 例、ModerationPagesTest 20 例
+vendor/bin/phpstan analyse (level 6)
+  [OK] No errors
+```
+
+`vuln-lab` 对照漏洞：见 [forum-vuln-lab.md](forum-vuln-lab.md) 的 V22–V26（治理类）。

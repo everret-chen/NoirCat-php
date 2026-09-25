@@ -8,6 +8,7 @@ return [
     'new_post' => 'New post',
     'search_placeholder' => 'Search posts…',
     'filter_category' => 'Section',
+    'no_category' => 'No section',
     'empty' => 'No posts yet, write the first one.',
     'post_title' => 'Title',
     'post_content' => 'Body',

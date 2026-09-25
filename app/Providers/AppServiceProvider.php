@@ -6,6 +6,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,8 +24,24 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureRoutePatterns();
         $this->configureRateLimiting();
         $this->configureEloquentStrictness();
+    }
+
+    /**
+     * Route parameters that address a row by id must be digits only.
+     *
+     * MySQL coerces the string "12abc" to 12 when comparing it with a BIGINT
+     * key, so without this pattern /forum/12abc would serve post 12 on MySQL
+     * while SQLite answers 404: the same URL would expose different content in
+     * development and in production.
+     */
+    private function configureRoutePatterns(): void
+    {
+        foreach (['post', 'comment', 'report', 'category', 'session', 'id'] as $parameter) {
+            Route::pattern($parameter, '[0-9]+');
+        }
     }
 
     /**

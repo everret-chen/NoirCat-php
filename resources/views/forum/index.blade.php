@@ -54,6 +54,12 @@
                             @if ($post->is_pinned)
                                 <span class="badge-pin">{{ __('ui.status.pinned') }}</span>
                             @endif
+                            @if ($post->is_featured)
+                                <span class="badge-featured">{{ __('ui.status.featured') }}</span>
+                            @endif
+                            @if ($post->is_locked)
+                                <span class="badge-locked">{{ __('ui.status.locked') }}</span>
+                            @endif
                             @if (! $post->isPublished())
                                 <span class="badge-draft">{{ __('ui.status.draft') }}</span>
                             @endif
