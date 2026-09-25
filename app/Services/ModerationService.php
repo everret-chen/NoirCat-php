@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Enums\Permission;
 use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Comment;
@@ -93,11 +92,9 @@ class ModerationService
      */
     public function trashPosts(User $viewer, int $perPage = 15): LengthAwarePaginator
     {
+        // VULN: the post:delete_any filter is gone, so every member sees every
+        // deleted post - including content a moderator removed.
         return Post::onlyTrashed()
-            ->when(
-                ! $viewer->can(Permission::POST_DELETE_ANY->value),
-                fn ($query) => $query->where('author_id', $viewer->getAuthIdentifier()),
-            )
             ->with(['author:id,username,avatar', 'category:id,name,name_en,slug'])
             ->orderByDesc('deleted_at')
             ->paginate($perPage, ['*'], 'posts_page');
@@ -111,11 +108,9 @@ class ModerationService
      */
     public function trashComments(User $viewer, int $perPage = 15): LengthAwarePaginator
     {
+        // VULN: the comment:delete_any filter is gone, so every member sees
+        // every deleted comment.
         return Comment::onlyTrashed()
-            ->when(
-                ! $viewer->can(Permission::COMMENT_DELETE_ANY->value),
-                fn ($query) => $query->where('author_id', $viewer->getAuthIdentifier()),
-            )
             ->with(['author:id,username,avatar', 'post:id,title,slug'])
             ->orderByDesc('deleted_at')
             ->paginate($perPage, ['*'], 'comments_page');

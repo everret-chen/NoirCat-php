@@ -40,12 +40,16 @@ class PostPolicy
 
     public function feature(User $user, Post $post): bool
     {
-        return $user->can(Permission::POST_FEATURE->value);
+        // VULN: no post:feature check - any member can put a thread on the front
+        // page, which is editorial control they were never given.
+        return true;
     }
 
     public function lock(User $user, Post $post): bool
     {
-        return $user->can(Permission::POST_LOCK->value);
+        // VULN: no post:lock check - any member can freeze somebody else's
+        // thread and cut the discussion off.
+        return true;
     }
 
     /**
@@ -54,7 +58,9 @@ class PostPolicy
      */
     public function move(User $user, Post $post): bool
     {
-        return $user->can(Permission::POST_MOVE->value);
+        // VULN: no post:move check - any member can re-file any thread into any
+        // section.
+        return true;
     }
 
     /**
@@ -63,7 +69,9 @@ class PostPolicy
      */
     public function restore(User $user, Post $post): bool
     {
-        return $this->delete($user, $post);
+        // VULN: restore is unconditional, so a member can un-delete content a
+        // moderator removed - and can undo the removal of someone else's post.
+        return true;
     }
 
     public function like(User $user, Post $post): bool
@@ -79,6 +87,9 @@ class PostPolicy
     {
         // VULN: comments are accepted on drafts too, so an account can attach
         // content to a post it is not supposed to know exists.
+        //
+        // VULN (V26): is_locked() is never consulted either, so the policy
+        // reports a locked thread as open for replies.
         return true;
     }
 

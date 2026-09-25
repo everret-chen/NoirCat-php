@@ -36,7 +36,9 @@ class CommentPolicy
      */
     public function restore(User $user, Comment $comment): bool
     {
-        return $this->delete($user, $comment);
+        // VULN: restore is unconditional, so a member can bring back a comment a
+        // moderator removed.
+        return true;
     }
 
     public function report(User $user, Comment $comment): bool

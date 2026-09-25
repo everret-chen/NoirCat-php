@@ -36,13 +36,9 @@ class CommentService
      */
     public function create(User $author, Post $post, array $attributes): Comment
     {
-        // Defence in depth: the policy already blocks a locked thread at the
-        // controller, and the service refuses it too in case another caller
-        // forgets.
-        if ($post->isLocked()) {
-            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.post_locked'), 422);
-        }
-
+        // VULN (V26): the locked-thread guard is gone. PostPolicy::comment no
+        // longer looks at is_locked() either, so a locked thread keeps
+        // accepting replies and the moderator action means nothing.
         $parentId = $attributes['parent_id'] ?? null;
 
         if ($parentId !== null) {

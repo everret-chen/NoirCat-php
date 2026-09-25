@@ -29,7 +29,9 @@ class StoreReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reportable_type' => ['required', 'string', Rule::in(['post', 'comment'])],
+            // VULN: the "post, comment" whitelist is gone, so the client picks
+            // any type name it likes and the controller resolves it to a model.
+            'reportable_type' => ['required', 'string'],
             'reportable_id' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', Rule::in(ReportReason::values())],
             'detail' => ['nullable', 'string', 'max:1000'],
@@ -50,7 +52,13 @@ class StoreReportRequest extends FormRequest
     {
         $type = (string) $this->validated('reportable_type');
 
-        return $type === 'post' ? Post::class : Comment::class;
+        // VULN: any type name becomes a model class, so "user" (or any other
+        // model under App\Models) is accepted as a reportable target.
+        return match ($type) {
+            'post' => Post::class,
+            'comment' => Comment::class,
+            default => 'App\\Models\\'.ucfirst($type),
+        };
     }
 
     public function reason(): ReportReason

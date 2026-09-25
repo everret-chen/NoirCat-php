@@ -5,7 +5,7 @@
 
 - **基线**：`main` 上已审计的认证模块（含邮箱验证 / 密码重置 / 会话管理），见 [auth-audit.md](auth-audit.md)
 - **构造方式**：本分支 = `main` + 一个漏洞提交，共注入 **V1–V11**，每处都带 `// VULN:` 注释便于定位
-- **验证方式**：`php artisan test` → 认证部分 **14 个用例由绿转红**（本分支还包含论坛漏洞 V12–V21，全量为 **38 failed / 77 passed**）
+- **验证方式**：`php artisan test` → 认证部分 **14 个用例由绿转红**（本分支还包含论坛漏洞 V12–V21 与治理漏洞 V22–V26，全量为 **63 failed / 110 passed**：173 例、576 断言）
 
 ## 漏洞清单
 
@@ -42,7 +42,7 @@ FAILED  WebPagesTest > an unsigned verification link is rejected     ← V9（�
 FAILED  PasswordResetTest > a reset token cannot be used twice      ← V10
 FAILED  PasswordResetTest > the reset request endpoint is rate…     ← V11
 
-（认证模块单独统计为 14 例转红；本分支加入论坛漏洞 V12–V21 后全量为 38 failed, 77 passed, 397 assertions）
+（认证模块单独统计为 14 例转红；本分支加入论坛漏洞 V12–V21 与治理漏洞 V22–V26 后，全量为 63 failed, 110 passed, 576 assertions）
 ```
 
 ## 三类视角

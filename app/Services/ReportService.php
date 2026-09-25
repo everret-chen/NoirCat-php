@@ -25,34 +25,28 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ReportService
 {
-    /**
-     * Content types a member is allowed to report.
-     */
-    private const REPORTABLE = [Post::class, Comment::class];
-
     public function __construct(private readonly AuditLogService $auditLogs)
     {
     }
 
     public function create(User $reporter, Model $reportable, ReportReason $reason, ?string $detail = null): Report
     {
-        if (! in_array($reportable::class, self::REPORTABLE, true)) {
-            throw new BusinessException(ErrorCode::VALIDATION_FAILED, __('forum.errors.report_unsupported'), 422);
-        }
-
+        // VULN: the REPORTABLE whitelist is gone, so any model - including a
+        // User - can be passed as the target and lands in the queue.
+        //
+        // VULN: the "you cannot report your own content" check is gone too, so
+        // an author can file reports against their own post or comment.
+        //
         // Reporting deleted content is pointless: there is nothing left to act
         // on, and letting it through would leave unresolvable queue entries.
         if (method_exists($reportable, 'trashed') && $reportable->trashed()) {
             throw new BusinessException(ErrorCode::RESOURCE_NOT_FOUND, __('forum.errors.report_gone'), 404);
         }
 
-        if ($this->authorIdOf($reportable) === $reporter->id) {
-            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.report_own'), 422);
-        }
-
-        if ($this->alreadyReported($reporter, $reportable)) {
-            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.report_duplicate'), 409);
-        }
+        // VULN: the duplicate pre-check (alreadyReported) is gone and the
+        // reports_reporter_unique index is dropped in
+        // 2026_09_21_100300_drop_reports_unique_index, so one account can flood
+        // the moderation queue with identical reports.
 
         $report = new Report([
             'reason' => $reason,
@@ -175,23 +169,5 @@ class ReportService
         );
 
         return $report;
-    }
-
-    private function alreadyReported(User $reporter, Model $reportable): bool
-    {
-        return Report::query()
-            ->where('reporter_id', $reporter->id)
-            ->where('reportable_type', $reportable->getMorphClass())
-            ->where('reportable_id', $reportable->getKey())
-            ->exists();
-    }
-
-    private function authorIdOf(Model $reportable): ?int
-    {
-        if ($reportable instanceof Post || $reportable instanceof Comment) {
-            return (int) $reportable->author_id;
-        }
-
-        return null;
     }
 }

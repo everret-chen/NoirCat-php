@@ -17,7 +17,9 @@ class ReportPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can(Permission::REPORT_HANDLE->value);
+        // VULN: no report:handle check - any member can read the moderation
+        // queue, which exposes who reported whom and why.
+        return true;
     }
 
     /**
@@ -26,6 +28,8 @@ class ReportPolicy
      */
     public function handle(User $user, Report $report): bool
     {
-        return $user->can(Permission::REPORT_HANDLE->value);
+        // VULN: no report:handle check - any member can close (or dismiss) an
+        // open report, so the queue can be emptied without a decision.
+        return true;
     }
 }
