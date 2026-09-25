@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\ModerationController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SearchController;
 use Illuminate\Support\Facades\Route;
 
@@ -110,7 +112,49 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('api.comments.destroy');
     Route::post('/comments/{comment}/hide', [CommentController::class, 'hide'])->name('api.comments.hide');
+
+    /*
+    |----------------------------------------------------------------------
+    | Moderation
+    |----------------------------------------------------------------------
+    |
+    | Authorised per action through PostPolicy / CommentPolicy / ReportPolicy:
+    | a member may report content, a moderator decides what happens to it.
+    | Deleted content is addressed by id, because a soft deleted row is not
+    | reachable through route model binding.
+    |
+    */
+
+    Route::post('/posts/{post}/feature', [ModerationController::class, 'feature'])->name('api.posts.feature');
+    Route::post('/posts/{post}/lock', [ModerationController::class, 'lock'])->name('api.posts.lock');
+    Route::put('/posts/{post}/category', [ModerationController::class, 'move'])->name('api.posts.move');
+
+    Route::post('/posts/{post}/restore', [ModerationController::class, 'restorePost'])
+        ->whereNumber('post')
+        ->name('api.posts.restore');
+
+    Route::post('/comments/{comment}/unhide', [ModerationController::class, 'unhideComment'])
+        ->whereNumber('comment')
+        ->name('api.comments.unhide');
+
+    Route::post('/comments/{comment}/restore', [ModerationController::class, 'restoreComment'])
+        ->whereNumber('comment')
+        ->name('api.comments.restore');
+
+    Route::get('/moderation/trash', [ModerationController::class, 'trash'])
+        ->middleware('permission:post:delete_own|post:delete_any')
+        ->name('api.moderation.trash');
+
+    Route::get('/reports', [ModerationController::class, 'reports'])->name('api.reports.index');
+    Route::post('/reports/{report}/resolve', [ModerationController::class, 'resolveReport'])->name('api.reports.resolve');
+    Route::post('/reports/{report}/dismiss', [ModerationController::class, 'dismissReport'])->name('api.reports.dismiss');
 });
+
+// Reporting is a member action: it needs an account and a verified address,
+// but no moderator rights.
+Route::post('/reports', [ReportController::class, 'store'])
+    ->middleware(['auth:sanctum', 'verified', 'throttle:posts'])
+    ->name('api.reports.store');
 
 /*
 |--------------------------------------------------------------------------

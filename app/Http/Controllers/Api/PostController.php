@@ -10,6 +10,8 @@ use App\Http\Requests\Forum\UpdatePostRequest;
 use App\Http\Resources\PostResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Post;
+use App\Models\User;
+use App\Services\ModerationService;
 use App\Services\PostService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,8 +19,10 @@ use Illuminate\Validation\Rule;
 
 class PostController extends Controller
 {
-    public function __construct(private readonly PostService $posts)
-    {
+    public function __construct(
+        private readonly PostService $posts,
+        private readonly ModerationService $moderation,
+    ) {
     }
 
     /**
@@ -143,7 +147,7 @@ class PostController extends Controller
         \assert($moderator instanceof \App\Models\User);
 
         $pinned = $request->boolean('pinned', true);
-        $post = $this->posts->setPinned($moderator, $post, $pinned);
+        $post = $this->moderation->setPinned($moderator, $post, $pinned);
 
         return ApiResponse::success(
             new PostResource($post),

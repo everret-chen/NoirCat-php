@@ -36,6 +36,13 @@ class CommentService
      */
     public function create(User $author, Post $post, array $attributes): Comment
     {
+        // Defence in depth: the policy already blocks a locked thread at the
+        // controller, and the service refuses it too in case another caller
+        // forgets.
+        if ($post->isLocked()) {
+            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.post_locked'), 422);
+        }
+
         $parentId = $attributes['parent_id'] ?? null;
 
         if ($parentId !== null) {
@@ -126,8 +133,64 @@ class CommentService
     }
 
     /**
+     * Undo a hide: the comment returns to the visible thread.
+     */
+    public function unhide(User $moderator, Comment $comment): Comment
+    {
+        if ($comment->status !== Comment::STATUS_HIDDEN) {
+            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.comment_not_hidden'), 409);
+        }
+
+        DB::transaction(function () use ($comment): void {
+            $comment->status = Comment::STATUS_VISIBLE;
+            $comment->save();
+
+            $this->incrementCounter($comment);
+        });
+
+        $this->auditLogs->record(
+            'forum.comment.unhidden',
+            ['post_id' => $comment->post_id],
+            AuditLog::RESULT_SUCCESS,
+            $comment,
+            $moderator->id,
+        );
+
+        return $comment;
+    }
+
+    /**
+     * Bring a soft deleted comment back and restore its place in the counter.
+     */
+    public function restore(User $actor, Comment $comment): Comment
+    {
+        if (! $comment->trashed()) {
+            throw new BusinessException(ErrorCode::BUSINESS_RULE_VIOLATION, __('forum.errors.comment_not_deleted'), 409);
+        }
+
+        DB::transaction(function () use ($comment): void {
+            $comment->restore();
+
+            if ($comment->status === Comment::STATUS_VISIBLE) {
+                $this->incrementCounter($comment);
+            }
+        });
+
+        $this->auditLogs->record(
+            'forum.comment.restored',
+            ['post_id' => $comment->post_id],
+            AuditLog::RESULT_SUCCESS,
+            $comment,
+            $actor->id,
+        );
+
+        return $comment;
+    }
+
+    /**
      * Keep posts.comment_count aligned with the comments a reader can actually
-     * see: hiding or deleting one must not leave the counter inflated.
+     * see: hiding or deleting one must not leave the counter inflated, and
+     * putting one back must not leave it short.
      */
     private function decrementCounter(Comment $comment): void
     {
@@ -135,6 +198,11 @@ class CommentService
             ->whereKey($comment->post_id)
             ->where('comment_count', '>', 0)
             ->decrement('comment_count');
+    }
+
+    private function incrementCounter(Comment $comment): void
+    {
+        Post::query()->whereKey($comment->post_id)->increment('comment_count');
     }
 
     private function depthOf(Comment $comment): int

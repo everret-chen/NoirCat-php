@@ -34,7 +34,7 @@ class CommentController extends Controller
         $comments = $post->comments()
             ->where('status', Comment::STATUS_VISIBLE)
             ->with('author:id,username,avatar')
-            ->orderBy('created_at')
+            ->orderBy('created_at')->orderBy('id')
             ->limit(500)
             ->get();
 
