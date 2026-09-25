@@ -52,11 +52,20 @@ return [
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
-            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            // MySQL 8's own default (utf8mb4_0900_ai_ci) compares without
+            // padding and does not fold supplementary characters (emoji)
+            // together the way utf8mb4_unicode_ci does.
+            'collation' => env('DB_COLLATION', 'utf8mb4_0900_ai_ci'),
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+            // Without an engine name the server default applies, and a MyISAM
+            // default would silently drop every foreign key in the schema.
+            'engine' => env('DB_ENGINE', 'InnoDB'),
+            // Keep the session clock aligned with APP_TIMEZONE: MySQL converts
+            // TIMESTAMP columns between the session zone and UTC, so an unset
+            // zone would mix two clocks inside one table.
+            'timezone' => env('DB_TIMEZONE', '+08:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
